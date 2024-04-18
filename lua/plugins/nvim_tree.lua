@@ -13,5 +13,7 @@ return {
         timeout = 500,
       },
     }
+    -- Open nvim tree
+    vim.keymap.set('n', '<C-B>', ':NvimTreeToggle<CR>')
   end,
 }

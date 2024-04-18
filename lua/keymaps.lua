@@ -30,7 +30,4 @@ vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 -- vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 --
 -- Add empty space
--- vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
-
--- Open nvim tree
-vim.keymap.set('n', '<C-m>', ':NvimTreeOpen<CR>')
+vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
