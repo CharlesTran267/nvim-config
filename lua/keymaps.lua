@@ -31,3 +31,12 @@ vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 --
 -- Add empty space
 vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
+
+-- Add auto-pairs
+vim.keymap.set('i', '"', '""<left>', { expr = false })
+vim.keymap.set('i', "'", "''<left>", { expr = false })
+vim.keymap.set('i', '(', '()<left>', { expr = false })
+vim.keymap.set('i', '[', '[]<left>', { expr = false })
+vim.keymap.set('i', '{', '{}<left>', { expr = false })
+vim.keymap.set('i', '{<CR>', '{<CR>}<Esc>O', { expr = false })
+vim.keymap.set('i', '`', '``<left>', { expr = false })
