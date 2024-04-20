@@ -12,7 +12,7 @@ return {
         ignore = false,
         timeout = 500,
       },
-      view = { side = 'left', width = 30 },
+      view = { side = 'left', width = 25 },
       update_focused_file = { enable = true, update_cwd = false },
       renderer = {
         highlight_modified = 'all',
