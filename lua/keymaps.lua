@@ -25,8 +25,8 @@ vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 --
 --  See `:help wincmd` for a list of all window commands
 
-vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
-vim.keymap.set('n', '<S-CR>', 'm`O<Esc>``')
+-- vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
+-- vim.keymap.set('n', '<S-CR>', 'm`O<Esc>``')
 
 -- Add auto-pairs
 vim.keymap.set('i', '"', '""<left>', { expr = false })
