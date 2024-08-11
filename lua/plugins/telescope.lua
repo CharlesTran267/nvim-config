@@ -23,6 +23,12 @@ return { -- Fuzzy Finder (files, lsp, etc)
     { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     'nvim-lua/popup.nvim',
     'nvim-telescope/telescope-media-files.nvim',
+    {
+      'nvim-telescope/telescope-live-grep-args.nvim',
+      -- This will not install any breaking changes.
+      -- For major updates, this must be adjusted manually.
+      version = '^1.0.0',
+    },
   },
   config = function()
     -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -67,6 +73,13 @@ return { -- Fuzzy Finder (files, lsp, etc)
           -- find command (defaults to `fd`)
           find_cmd = 'rg',
         },
+        fzf = {
+          fuzzy = true, -- false will only do exact matching
+          override_generic_sorter = true, -- override the generic sorter
+          override_file_sorter = true, -- override the file sorter
+          case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
+          -- the default case_mode is "smart_case"
+        },
       },
     }
 
@@ -74,6 +87,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     pcall(require('telescope').load_extension, 'fzf')
     pcall(require('telescope').load_extension, 'ui-select')
     pcall(require('telescope').load_extension, 'media_files')
+    pcall(require('telescope').load_extension, 'live_grep_args')
 
     -- See `:help telescope.builtin`
     local builtin = require 'telescope.builtin'

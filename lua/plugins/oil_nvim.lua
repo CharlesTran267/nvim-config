@@ -12,6 +12,13 @@ return {
         win_options = {
           signcolumn = 'yes:2',
         },
+        -- disable Ctrl + h/j/k/l
+        keymaps = {
+          ['<C-h>'] = false,
+          ['<C-j>'] = false,
+          ['<C-k>'] = false,
+          ['<C-l>'] = false,
+        },
       }
       vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
     end,

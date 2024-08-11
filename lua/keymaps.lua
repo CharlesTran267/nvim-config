@@ -36,3 +36,6 @@ vim.keymap.set('i', '[', '[]<left>', { expr = false })
 vim.keymap.set('i', '{', '{}<left>', { expr = false })
 vim.keymap.set('i', '{<CR>', '{<CR>}<Esc>O', { expr = false })
 vim.keymap.set('i', '`', '``<left>', { expr = false })
+
+-- paste in visual mode without overwriting the default register
+vim.keymap.set('v', 'p', '"_dP', { expr = false })
