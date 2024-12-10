@@ -1,6 +1,22 @@
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
+-- Function to toggle diagnostics
+local diagnostics_enabled = true
+
+local function toggle_diagnostics()
+  diagnostics_enabled = not diagnostics_enabled
+  if diagnostics_enabled then
+    vim.diagnostic.enable(0) -- Enable diagnostics for the current buffer
+    print 'Diagnostics enabled'
+  else
+    vim.diagnostic.disable(0) -- Disable diagnostics for the current buffer
+    print 'Diagnostics disabled'
+  end
+end
+
+-- Set the keymap
+vim.keymap.set('n', '<leader>td', toggle_diagnostics, { noremap = true, silent = true, desc = 'Toggle diagnostics' })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
