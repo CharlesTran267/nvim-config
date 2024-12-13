@@ -7,9 +7,26 @@ vim.g.maplocalleader = ' '
 -- Set to true if you have a Nerd Font installed
 vim.g.have_nerd_font = true
 
--- Set the current working directory to the directory of the current file
-vim.cmd('autocmd VimEnter * lcd %:p:h')
-vim.cmd('autocmd VimEnter * silent! lcd .')
+-- Create an augroup for managing the working directory
+vim.api.nvim_create_augroup('AutoCWD', { clear = true })
+-- Automatically set the working directory.
+-- If no argument is passed to Neovim, set the working directory to the current directory
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = 'AutoCWD',
+  callback = function()
+    local arg = vim.fn.argv(0) -- Get the first argument passed to Neovim
+    -- print the argument passed to Neovim
+    print('Argument passed to Neovim: ' .. arg)
+    if arg == '' then
+      -- No argument, set to the current directory
+      vim.cmd('cd ' .. vim.fn.getcwd())
+    else
+      -- Strip 'oil://' prefix if it exists
+      local resolved_path = vim.fn.fnamemodify(arg, ':h'):gsub('^oil://', '')
+      vim.cmd('cd ' .. resolved_path)
+    end
+  end,
+})
 
 -- Add options, autocmd, and keymaps
 require 'options'
