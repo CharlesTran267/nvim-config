@@ -16,7 +16,6 @@ vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
     local arg = vim.fn.argv(0) -- Get the first argument passed to Neovim
     -- print the argument passed to Neovim
-    print('Argument passed to Neovim: ' .. arg)
     if arg == '' then
       -- No argument, set to the current directory
       vim.cmd('cd ' .. vim.fn.getcwd())
