@@ -7,6 +7,10 @@ vim.g.maplocalleader = ' '
 -- Set to true if you have a Nerd Font installed
 vim.g.have_nerd_font = true
 
+-- Set the current working directory to the directory of the current file
+vim.cmd('autocmd VimEnter * lcd %:p:h')
+vim.cmd('autocmd VimEnter * silent! lcd .')
+
 -- Add options, autocmd, and keymaps
 require 'options'
 require 'autocmd'
