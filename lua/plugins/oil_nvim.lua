@@ -18,6 +18,7 @@ return {
           ['<C-j>'] = false,
           ['<C-k>'] = false,
           ['<C-l>'] = false,
+          ['<A-l>'] = "actions.refresh",
         },
       }
       vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
