@@ -191,6 +191,10 @@ return { -- LSP Configuration & Plugins
           },
         },
       },
+
+      cmake = {
+        cmd = { 'cmake-language-server' },
+      },
     }
 
     -- Ensure the servers and tools above are installed
