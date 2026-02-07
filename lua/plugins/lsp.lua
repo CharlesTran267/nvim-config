@@ -192,9 +192,6 @@ return { -- LSP Configuration & Plugins
         },
       },
 
-      cmake = {
-        cmd = { 'cmake-language-server' },
-      },
     }
 
     -- Ensure the servers and tools above are installed
@@ -224,6 +221,11 @@ return { -- LSP Configuration & Plugins
           require('lspconfig')[server_name].setup(server)
         end,
       },
+    }
+
+    -- Setup cmake-language-server manually (system-installed)
+    require('lspconfig').cmake.setup {
+      capabilities = capabilities,
     }
   end,
 }
