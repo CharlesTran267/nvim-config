@@ -3,6 +3,7 @@ return {
     'stevearc/oil.nvim',
     opts = {},
     -- Optional dependencies
+    lazy = false, -- Ensure Oil is loaded immediately
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     config = function()
       require('oil').setup {
@@ -18,10 +19,14 @@ return {
           ['<C-j>'] = false,
           ['<C-k>'] = false,
           ['<C-l>'] = false,
-          ['<A-l>'] = "actions.refresh",
+          ['<A-l>'] = 'actions.refresh',
         },
       }
       vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+      -- Open Oil if no arguments given
+      if vim.fn.argc() == 0 then
+        vim.cmd 'Oil'
+      end
     end,
   },
   {
