@@ -66,7 +66,12 @@ function telescopePickers.prettyFilesPicker(pickerAndOptions)
     --          ultimately be used by Telescope to display the entry by executing its 'display' key function.
     --          This reduces our work by only having to replace the 'display' function in said table instead
     --          of having to manipulate the rest of the data too.
-    local originalEntryMaker = telescopeMakeEntryModule.gen_from_file(options)
+    local originalEntryMaker
+    if pickerAndOptions.picker == 'buffers' then
+        originalEntryMaker = telescopeMakeEntryModule.gen_from_buffer(options)
+    else
+        originalEntryMaker = telescopeMakeEntryModule.gen_from_file(options)
+    end
 
     -- INSIGHT: 'entry_maker' is the hardcoded name of the option Telescope reads to obtain the function that
     --          will generate each entry.
@@ -102,7 +107,8 @@ function telescopePickers.prettyFilesPicker(pickerAndOptions)
         -- HELP: Read the 'make_entry.lua' file for more info on how all of this works
         originalEntryTable.display = function(entry)
             -- Get the Tail and the Path to display
-            local tail, pathToDisplay = telescopePickers.getPathAndTail(entry.value)
+            local filename = entry.filename or entry.value
+            local tail, pathToDisplay = telescopePickers.getPathAndTail(filename)
 
             -- Add an extra space to the tail so that it looks nicely separated from the path
             local tailForDisplay = tail .. ' '
@@ -130,6 +136,8 @@ function telescopePickers.prettyFilesPicker(pickerAndOptions)
         require('telescope.builtin').git_files(options)
     elseif pickerAndOptions.picker == 'oldfiles' then
         require('telescope.builtin').oldfiles(options)
+    elseif pickerAndOptions.picker == 'buffers' then
+        require('telescope.builtin').buffers(options)
     elseif pickerAndOptions.picker == '' then
         print("Picker was not specified")
     else
