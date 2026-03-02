@@ -46,3 +46,6 @@ vim.keymap.set('i', '{<CR>', '{<CR>}<Esc>O', { expr = false })
 
 -- paste in visual mode without overwriting the default register
 vim.keymap.set('v', 'p', '"_dP', { expr = false })
+
+-- Close buffer without closing the window
+vim.keymap.set('n', '<leader>bd', '<cmd>bdelete!<CR>', { desc = '[B]uffer [D]elete' })
