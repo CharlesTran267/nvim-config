@@ -55,13 +55,24 @@ return { -- Fuzzy Finder (files, lsp, etc)
     require('telescope').setup {
       -- You can put your default mappings / updates / etc. in here
       --  All the info you're looking for is in `:help telescope.setup()`
-      --
-      -- defaults = {
-      --   mappings = {
-      --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-      --   },
-      -- },
-      -- pickers = {}
+      defaults = {
+        -- Skip files larger than 1MB for preview
+        preview = {
+          filesize_limit = 1, -- MB
+          timeout = 250, -- ms
+        },
+        -- Skip binary and large files in grep
+        vimgrep_arguments = {
+          'rg',
+          '--color=never',
+          '--no-heading',
+          '--with-filename',
+          '--line-number',
+          '--column',
+          '--smart-case',
+          '--max-filesize=1M', -- Skip files larger than 1MB
+        },
+      },
       extensions = {
         ['ui-select'] = {
           require('telescope.themes').get_dropdown(),
@@ -94,7 +105,12 @@ return { -- Fuzzy Finder (files, lsp, etc)
     vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
     vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
     vim.keymap.set('n', '<leader>sf', function()
-      require('modules.telescope_pickers').prettyFilesPicker({ picker = 'find_files', find_command = { 'rg', '--files', '--hidden', '-g', '!.git', '-g', '!.venv' } })
+      require('modules.telescope_pickers').prettyFilesPicker({
+        picker = 'find_files',
+        options = {
+          find_command = { 'rg', '--files', '--hidden', '-g', '!.git', '-g', '!.venv' },
+        },
+      })
     end, { desc = '[S]earch [F]iles' })
     vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
     vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
