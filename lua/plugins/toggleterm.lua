@@ -2,9 +2,11 @@ return {
   'akinsho/toggleterm.nvim',
   branch = 'main',
   config = function()
-    require('toggleterm').setup {
+    local toggleterm = require('toggleterm')
+    local Terminal = require('toggleterm.terminal').Terminal
+
+    toggleterm.setup({
       direction = 'float',
-      open_mapping = [[<A-i>]],
       highlights = {
         FloatBorder = {
           guifg = '#8aadf4', -- Catppuccin Macchiato blue
@@ -12,11 +14,40 @@ return {
       },
       winbar = {
         enabled = true,
-        -- name_formatter = function(term)
-        --   return term.name
-        -- end,
+        name_formatter = function(term)
+          if term.display_name then
+            return ' ' .. term.id .. ': ' .. term.display_name
+          end
+          return ' Terminal ' .. term.id
+        end,
       },
-    }
+    })
+
+    -- Create predefined terminals
+    local random_term = Terminal:new({
+      display_name = 'random',
+      direction = 'float',
+      count = 1,
+    })
+
+    local lazygit_term = Terminal:new({
+      cmd = 'lazygit',
+      display_name = 'lazygit',
+      direction = 'float',
+      count = 2,
+    })
+
+    local aider_term = Terminal:new({
+      cmd = 'aider',
+      display_name = 'aider',
+      direction = 'float',
+      count = 3,
+    })
+
+    -- Keymaps for each terminal
+    vim.keymap.set({ 'n', 't' }, '<A-i>', function() random_term:toggle() end, { desc = 'Toggle random terminal' })
+    vim.keymap.set({ 'n', 't' }, '<A-g>', function() lazygit_term:toggle() end, { desc = 'Toggle lazygit' })
+    vim.keymap.set({ 'n', 't' }, '<A-a>', function() aider_term:toggle() end, { desc = 'Toggle aider' })
 
     -- Quick select terminal
     vim.keymap.set({ 'n', 't' }, '<A-s>', '<Cmd>TermSelect<CR>', { desc = 'Select terminal' })
