@@ -44,10 +44,18 @@ return {
       count = 3,
     })
 
+    local codex_term = Terminal:new({
+      cmd = 'codex',
+      display_name = 'codex',
+      direction = 'float',
+      count = 4,
+    })
+
     -- Keymaps for each terminal
     vim.keymap.set({ 'n', 't' }, '<A-i>', function() random_term:toggle() end, { desc = 'Toggle random terminal' })
     vim.keymap.set({ 'n', 't' }, '<A-g>', function() lazygit_term:toggle() end, { desc = 'Toggle lazygit' })
     vim.keymap.set({ 'n', 't' }, '<A-a>', function() aider_term:toggle() end, { desc = 'Toggle aider' })
+    vim.keymap.set({ 'n', 't' }, '<A-c>', function() codex_term:toggle() end, { desc = 'Toggle codex' })
 
     -- Quick select terminal
     vim.keymap.set({ 'n', 't' }, '<A-s>', '<Cmd>TermSelect<CR>', { desc = 'Select terminal' })
