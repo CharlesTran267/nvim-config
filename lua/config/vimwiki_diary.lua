@@ -58,44 +58,10 @@ local function find_section_range(lines, section_name)
   return start_idx, end_idx
 end
 
-local function open_day(offset)
-  local target = os.time() + (offset * 86400)
-  local year = os.date('%Y', target)
-  local week = get_week_number(target)
-  local day = os.date('%Y-%m-%d', target)
-  local dir = string.format('%s/%s/week%s', base_path, year, week)
-  local filepath = dir .. '/' .. day .. '.md'
-  
-  ensure_dir(dir)
-  vim.cmd('edit ' .. filepath)
-  
-  if vim.fn.filereadable(filepath) == 0 or vim.fn.getfsize(filepath) <= 0 then
-    local lines = {
-      '# ' .. day,
-      '',
-      '## Notes',
-      '',
-      '',
-      '',
-      '## TODO',
-      '',
-      '- [ ] ',
-    }
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-    vim.cmd('write')
-  end
-end
-
-function M.open_today()
-  open_day(0)
-end
-
-function M.open_yesterday()
-  open_day(-1)
-end
-
-function M.open_tomorrow()
-  open_day(1)
+local function get_day_name(date)
+  local wday = os.date('*t', date).wday
+  local names = { 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' }
+  return names[wday]
 end
 
 local function open_week_offset(offset)
@@ -114,63 +80,36 @@ local function open_week_offset(offset)
   local end_date = os.date('%Y-%m-%d', sunday)
   
   local filepath = dir .. '/index.md'
-  local days = scan_files(dir, '^%d%d%d%d%-%d%d%-%d%d%.md$')
   local today = os.date('%Y-%m-%d')
   
   local existing_lines = read_file_lines(filepath)
   
-  -- Build new Days section content
-  local days_content = {}
-  table.insert(days_content, '## Days')
-  table.insert(days_content, '')
-  if #days > 0 then
-    for _, day in ipairs(days) do
-      local day_name = day:gsub('%.md$', '')
-      if day_name == today then
-        table.insert(days_content, '- **[' .. day_name .. '](' .. day .. ') ← TODAY**')
-      else
-        table.insert(days_content, '- [' .. day_name .. '](' .. day .. ')')
-      end
-    end
-  else
-    table.insert(days_content, '_No entries yet_')
-  end
-  table.insert(days_content, '')
-  
-  local lines
   if #existing_lines > 0 then
-    local start_idx, end_idx = find_section_range(existing_lines, 'Days')
-    if start_idx then
-      -- Replace existing Days section
-      lines = {}
-      for i = 1, start_idx - 1 do
-        table.insert(lines, existing_lines[i])
-      end
-      for _, line in ipairs(days_content) do
-        table.insert(lines, line)
-      end
-      for i = end_idx + 1, #existing_lines do
-        table.insert(lines, existing_lines[i])
-      end
-    else
-      -- No Days section, insert after header
-      lines = { existing_lines[1], '' }
-      for _, line in ipairs(days_content) do
-        table.insert(lines, line)
-      end
-      for i = 2, #existing_lines do
-        table.insert(lines, existing_lines[i])
-      end
-    end
+    -- File exists, just open it
+    vim.cmd('edit ' .. filepath)
   else
-    -- New file
-    lines = {
+    -- New file - generate all days
+    local lines = {
       '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
       '',
     }
-    for _, line in ipairs(days_content) do
-      table.insert(lines, line)
+    
+    -- Generate all 7 days (Monday to Sunday)
+    for i = 0, 6 do
+      local day_time = monday + (i * 86400)
+      local day_str = os.date('%Y-%m-%d', day_time)
+      local day_name = get_day_name(day_time)
+      
+      if day_str == today then
+        table.insert(lines, '## ' .. day_name .. ' ' .. day_str .. ' ← TODAY')
+      else
+        table.insert(lines, '## ' .. day_name .. ' ' .. day_str)
+      end
+      table.insert(lines, '')
+      table.insert(lines, '')
+      table.insert(lines, '')
     end
+    
     table.insert(lines, '## Notes')
     table.insert(lines, '')
     table.insert(lines, '')
@@ -178,15 +117,11 @@ local function open_week_offset(offset)
     table.insert(lines, '## TODO')
     table.insert(lines, '')
     table.insert(lines, '- [ ] ')
+    
+    vim.cmd('edit ' .. filepath)
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+    vim.cmd('write')
   end
-  
-  vim.cmd('edit ' .. filepath)
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-  vim.cmd('write')
-end
-
-function M.refresh_week()
-  open_week_offset(0)
 end
 
 function M.open_week()
@@ -199,54 +134,6 @@ end
 
 function M.open_prev_week()
   open_week_offset(-1)
-end
-
-local function open_day_from_date(year, month, day, offset)
-  local target = os.time({ year = year, month = month, day = day + offset })
-  local target_year = os.date('%Y', target)
-  local week = get_week_number(target)
-  local day_str = os.date('%Y-%m-%d', target)
-  local dir = string.format('%s/%s/week%s', base_path, target_year, week)
-  local filepath = dir .. '/' .. day_str .. '.md'
-
-  ensure_dir(dir)
-  vim.cmd('edit ' .. filepath)
-
-  if vim.fn.filereadable(filepath) == 0 or vim.fn.getfsize(filepath) <= 0 then
-    local lines = {
-      '# ' .. day_str,
-      '',
-      '## Notes',
-      '',
-      '',
-      '',
-      '## TODO',
-      '',
-      '- [ ] ',
-    }
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-    vim.cmd('write')
-  end
-end
-
-function M.open_next_day()
-  local filename = vim.fn.expand('%:t:r')
-  local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
-  if y then
-    open_day_from_date(tonumber(y), tonumber(m), tonumber(d), 1)
-  else
-    open_day(1) -- fallback to tomorrow
-  end
-end
-
-function M.open_prev_day()
-  local filename = vim.fn.expand('%:t:r')
-  local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
-  if y then
-    open_day_from_date(tonumber(y), tonumber(m), tonumber(d), -1)
-  else
-    open_day(-1) -- fallback to yesterday
-  end
 end
 
 function M.open_year()
@@ -338,21 +225,9 @@ function M.refresh_year()
   M.open_year()
 end
 
-vim.api.nvim_create_user_command('WikiRefreshWeek', function()
-  M.refresh_week()
-end, { desc = 'Refresh current week index' })
-
 vim.api.nvim_create_user_command('WikiRefreshYear', function()
   M.refresh_year()
 end, { desc = 'Refresh current year index' })
-
-vim.api.nvim_create_user_command('WikiNextDay', function()
-  M.open_next_day()
-end, { desc = 'Open next day diary' })
-
-vim.api.nvim_create_user_command('WikiPrevDay', function()
-  M.open_prev_day()
-end, { desc = 'Open previous day diary' })
 
 vim.api.nvim_create_user_command('WikiNextWeek', function()
   M.open_next_week()
@@ -361,18 +236,6 @@ end, { desc = 'Open next week index' })
 vim.api.nvim_create_user_command('WikiPrevWeek', function()
   M.open_prev_week()
 end, { desc = 'Open previous week index' })
-
-vim.api.nvim_create_user_command('WikiToday', function()
-  M.open_today()
-end, { desc = 'Open today diary' })
-
-vim.api.nvim_create_user_command('WikiYesterday', function()
-  M.open_yesterday()
-end, { desc = 'Open yesterday diary' })
-
-vim.api.nvim_create_user_command('WikiTomorrow', function()
-  M.open_tomorrow()
-end, { desc = 'Open tomorrow diary' })
 
 vim.api.nvim_create_user_command('WikiWeek', function()
   M.open_week()
