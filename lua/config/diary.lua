@@ -59,11 +59,20 @@ function M.open_week()
   local dir = string.format('%s/%s/week%s', base_path, year, week)
   ensure_dir(dir)
   
+  -- Calculate week start (Monday) and end (Sunday) dates
+  local today = os.time()
+  local wday = os.date('*t', today).wday
+  local days_since_monday = (wday + 5) % 7  -- Monday = 0, Sunday = 6
+  local monday = today - (days_since_monday * 86400)
+  local sunday = monday + (6 * 86400)
+  local start_date = os.date('%Y-%m-%d', monday)
+  local end_date = os.date('%Y-%m-%d', sunday)
+  
   local filepath = dir .. '/index.md'
   local days = scan_files(dir, '^%d%d%d%d%-%d%d%-%d%d%.md$')
   
   local lines = {
-    '# Week ' .. week .. ' - ' .. year,
+    '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
     '',
     '## Days',
     '',
