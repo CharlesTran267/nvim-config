@@ -129,13 +129,39 @@ function M.open_prev_week()
   open_week_offset(-1)
 end
 
+local function open_day_from_date(year, month, day, offset)
+  local target = os.time({ year = year, month = month, day = day + offset })
+  local target_year = os.date('%Y', target)
+  local week = get_week_number(target)
+  local day_str = os.date('%Y-%m-%d', target)
+  local dir = string.format('%s/%s/week%s', base_path, target_year, week)
+  local filepath = dir .. '/' .. day_str .. '.md'
+
+  ensure_dir(dir)
+  vim.cmd('edit ' .. filepath)
+
+  if vim.fn.filereadable(filepath) == 0 or vim.fn.getfsize(filepath) <= 0 then
+    local lines = {
+      '# ' .. day_str,
+      '',
+      '## Notes',
+      '',
+      '',
+      '',
+      '## TODO',
+      '',
+      '- [ ] ',
+    }
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+    vim.cmd('write')
+  end
+end
+
 function M.open_next_day()
-  -- Find current file's date and open next day
   local filename = vim.fn.expand('%:t:r')
   local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
   if y then
-    local current = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
-    open_day(math.floor((current - os.time()) / 86400) + 1)
+    open_day_from_date(tonumber(y), tonumber(m), tonumber(d), 1)
   else
     open_day(1) -- fallback to tomorrow
   end
@@ -145,8 +171,7 @@ function M.open_prev_day()
   local filename = vim.fn.expand('%:t:r')
   local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
   if y then
-    local current = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
-    open_day(math.floor((current - os.time()) / 86400) - 1)
+    open_day_from_date(tonumber(y), tonumber(m), tonumber(d), -1)
   else
     open_day(-1) -- fallback to yesterday
   end
