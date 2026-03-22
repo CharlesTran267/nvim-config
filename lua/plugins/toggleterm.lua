@@ -106,8 +106,13 @@ return {
       end
     end, { desc = 'Quit terminal' })
 
+    -- Toggle general terminal
+    vim.keymap.set({ 'n', 't' }, '<A-g>', function()
+      toggle_terminal('general')
+    end, { desc = 'Toggle general terminal' })
+
     -- Create new shell (prompts for name)
-    vim.keymap.set({ 'n', 't' }, '<A-n>', function()
+    vim.keymap.set({ 'n', 't' }, '<A-S-n>', function()
       vim.ui.input({ prompt = 'Shell name: ' }, function(name)
         if name and name ~= '' then
           create_new_shell(name)
