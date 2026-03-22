@@ -86,8 +86,24 @@ return {
       end)
     end, { desc = 'Select terminal' })
 
-    -- Close current terminal
-    vim.keymap.set('t', '<A-q>', '<Cmd>close<CR>', { desc = 'Close terminal' })
+    -- Quit current terminal (custom shells removed from list, predefined start fresh)
+    vim.keymap.set('t', '<A-q>', function()
+      local current_term = terminals[last_terminal]
+      if current_term then
+        current_term:shutdown()
+        terminals[last_terminal] = nil -- Remove from cache so it starts fresh next time
+
+        -- If it's a custom shell, remove it from the list entirely
+        for i, name in ipairs(custom_shells) do
+          if name == last_terminal then
+            table.remove(custom_shells, i)
+            terminal_configs[last_terminal] = nil
+            break
+          end
+        end
+      end
+      vim.cmd 'close'
+    end, { desc = 'Quit terminal' })
 
     -- Create new shell (prompts for name)
     vim.keymap.set({ 'n', 't' }, '<A-n>', function()
