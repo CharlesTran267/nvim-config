@@ -181,6 +181,30 @@ local function get_day_name(date)
   return names[wday]
 end
 
+local function update_day_links_today(lines, monday)
+  local today = os.date('%Y-%m-%d')
+  local updated = {}
+  
+  for _, line in ipairs(lines) do
+    -- Check if this is a day link line
+    if line:match('^%- %[') and line:match('%d%d%d%d%-%d%d%-%d%d') then
+      -- Remove any existing TODAY marker
+      local clean = line:gsub(' ← TODAY', '')
+      -- Extract the date from the line
+      local date_in_line = clean:match('(%d%d%d%d%-%d%d%-%d%d)')
+      if date_in_line == today then
+        -- Add TODAY marker before the closing bracket of the link text
+        clean = clean:gsub('%]%(#', ' ← TODAY](#')
+      end
+      table.insert(updated, clean)
+    else
+      table.insert(updated, line)
+    end
+  end
+  
+  return updated
+end
+
 local function generate_day_links(monday, today)
   local links = {}
   for i = 0, 6 do
@@ -229,8 +253,11 @@ local function open_week_offset(offset)
   local existing_lines = read_file_lines(filepath)
   
   if #existing_lines > 0 then
-    -- File exists, just open it
+    -- File exists, update TODAY marker and open
+    local updated_lines = update_day_links_today(existing_lines, monday)
     vim.cmd('edit ' .. filepath)
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, updated_lines)
+    vim.cmd('write')
   else
     -- New file - use template
     local template = read_template('week')
@@ -260,6 +287,10 @@ end
 
 function M.open_prev_week()
   open_week_offset(-1)
+end
+
+function M.refresh_week()
+  open_week_offset(0)
 end
 
 local function generate_week_links(dir, year, current_week)
@@ -353,6 +384,10 @@ end
 function M.refresh_year()
   M.open_year()
 end
+
+vim.api.nvim_create_user_command('WikiRefreshWeek', function()
+  M.refresh_week()
+end, { desc = 'Refresh current week index' })
 
 vim.api.nvim_create_user_command('WikiRefreshYear', function()
   M.refresh_year()
