@@ -109,10 +109,12 @@ local function open_week_offset(offset)
   table.insert(lines, '- [ ] ')
   
   vim.cmd('edit ' .. filepath)
-  if vim.fn.filereadable(filepath) == 0 then
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-    vim.cmd('write')
-  end
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+  vim.cmd('write')
+end
+
+function M.refresh_week()
+  open_week_offset(0)
 end
 
 function M.open_week()
@@ -169,10 +171,20 @@ function M.open_year()
   table.insert(lines, '- [ ] ')
   
   vim.cmd('edit ' .. filepath)
-  if vim.fn.filereadable(filepath) == 0 then
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-    vim.cmd('write')
-  end
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+  vim.cmd('write')
 end
+
+function M.refresh_year()
+  M.open_year()
+end
+
+vim.api.nvim_create_user_command('DiaryRefreshWeek', function()
+  M.refresh_week()
+end, { desc = 'Refresh current week index' })
+
+vim.api.nvim_create_user_command('DiaryRefreshYear', function()
+  M.refresh_year()
+end, { desc = 'Refresh current year index' })
 
 return M
