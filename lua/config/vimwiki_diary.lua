@@ -118,8 +118,17 @@ function M.open_year()
   }
   
   if #weeks > 0 then
-    for _, week in ipairs(weeks) do
-      table.insert(lines, '- [' .. week .. '](' .. week .. '/index.md)')
+    for _, w in ipairs(weeks) do
+      local wnum = tonumber(w:match('week(%d+)'))
+      -- Calculate the Monday of this week number
+      local jan1 = os.time({ year = tonumber(year), month = 1, day = 1 })
+      local jan1_wday = os.date('*t', jan1).wday
+      local days_to_monday = (wnum - 1) * 7 - ((jan1_wday + 5) % 7)
+      local monday = jan1 + (days_to_monday * 86400)
+      local sunday = monday + (6 * 86400)
+      local start_date = os.date('%Y-%m-%d', monday)
+      local end_date = os.date('%Y-%m-%d', sunday)
+      table.insert(lines, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
     end
   else
     table.insert(lines, '_No entries yet_')
