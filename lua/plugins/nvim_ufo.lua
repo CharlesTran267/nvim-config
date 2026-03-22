@@ -25,6 +25,7 @@ return {
         default = { 'imports', 'comment' },
         json = { 'array' },
         c = { 'comment', 'region' },
+        markdown = { 'comment' },
       },
       preview = {
         win_config = {
@@ -39,6 +40,9 @@ return {
         },
       },
       provider_selector = function(bufnr, filetype, buftype)
+        if filetype == 'markdown' then
+          return { 'treesitter', 'indent' }
+        end
         return { 'lsp', 'indent' }
       end,
       fold_virt_text_handler = function(virtText, lnum, endLnum, width, truncate, ctx)
