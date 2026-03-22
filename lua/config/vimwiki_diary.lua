@@ -26,6 +26,38 @@ local function scan_files(dir, pattern)
   return files
 end
 
+local function read_file_lines(filepath)
+  local lines = {}
+  local file = io.open(filepath, 'r')
+  if file then
+    for line in file:lines() do
+      table.insert(lines, line)
+    end
+    file:close()
+  end
+  return lines
+end
+
+local function find_section_range(lines, section_name)
+  local start_idx = nil
+  local end_idx = nil
+  
+  for i, line in ipairs(lines) do
+    if line:match('^## ' .. section_name) then
+      start_idx = i
+    elseif start_idx and line:match('^## ') then
+      end_idx = i - 1
+      break
+    end
+  end
+  
+  if start_idx and not end_idx then
+    end_idx = #lines
+  end
+  
+  return start_idx, end_idx
+end
+
 local function open_day(offset)
   local target = os.time() + (offset * 86400)
   local year = os.date('%Y', target)
@@ -85,34 +117,68 @@ local function open_week_offset(offset)
   local days = scan_files(dir, '^%d%d%d%d%-%d%d%-%d%d%.md$')
   local today = os.date('%Y-%m-%d')
   
-  local lines = {
-    '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
-    '',
-    '## Days',
-    '',
-  }
+  local existing_lines = read_file_lines(filepath)
   
+  -- Build new Days section content
+  local days_content = {}
+  table.insert(days_content, '## Days')
+  table.insert(days_content, '')
   if #days > 0 then
     for _, day in ipairs(days) do
       local day_name = day:gsub('%.md$', '')
       if day_name == today then
-        table.insert(lines, '- **[' .. day_name .. '](' .. day .. ') ← TODAY**')
+        table.insert(days_content, '- **[' .. day_name .. '](' .. day .. ') ← TODAY**')
       else
-        table.insert(lines, '- [' .. day_name .. '](' .. day .. ')')
+        table.insert(days_content, '- [' .. day_name .. '](' .. day .. ')')
       end
     end
   else
-    table.insert(lines, '_No entries yet_')
+    table.insert(days_content, '_No entries yet_')
   end
+  table.insert(days_content, '')
   
-  table.insert(lines, '')
-  table.insert(lines, '## Notes')
-  table.insert(lines, '')
-  table.insert(lines, '')
-  table.insert(lines, '')
-  table.insert(lines, '## TODO')
-  table.insert(lines, '')
-  table.insert(lines, '- [ ] ')
+  local lines
+  if #existing_lines > 0 then
+    local start_idx, end_idx = find_section_range(existing_lines, 'Days')
+    if start_idx then
+      -- Replace existing Days section
+      lines = {}
+      for i = 1, start_idx - 1 do
+        table.insert(lines, existing_lines[i])
+      end
+      for _, line in ipairs(days_content) do
+        table.insert(lines, line)
+      end
+      for i = end_idx + 1, #existing_lines do
+        table.insert(lines, existing_lines[i])
+      end
+    else
+      -- No Days section, insert after header
+      lines = { existing_lines[1], '' }
+      for _, line in ipairs(days_content) do
+        table.insert(lines, line)
+      end
+      for i = 2, #existing_lines do
+        table.insert(lines, existing_lines[i])
+      end
+    end
+  else
+    -- New file
+    lines = {
+      '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
+      '',
+    }
+    for _, line in ipairs(days_content) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, '## Notes')
+    table.insert(lines, '')
+    table.insert(lines, '')
+    table.insert(lines, '')
+    table.insert(lines, '## TODO')
+    table.insert(lines, '')
+    table.insert(lines, '- [ ] ')
+  end
   
   vim.cmd('edit ' .. filepath)
   vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
@@ -192,13 +258,12 @@ function M.open_year()
   local weeks = scan_files(dir, '^week%d+$')
   local current_week = tonumber(get_week_number(os.time()))
   
-  local lines = {
-    '# ' .. year,
-    '',
-    '## Weeks',
-    '',
-  }
+  local existing_lines = read_file_lines(filepath)
   
+  -- Build new Weeks section content
+  local weeks_content = {}
+  table.insert(weeks_content, '## Weeks')
+  table.insert(weeks_content, '')
   if #weeks > 0 then
     for _, w in ipairs(weeks) do
       local wnum = tonumber(w:match('week(%d+)'))
@@ -211,23 +276,58 @@ function M.open_year()
       local start_date = os.date('%Y-%m-%d', monday)
       local end_date = os.date('%Y-%m-%d', sunday)
       if wnum == current_week then
-        table.insert(lines, '- **[Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md) ← THIS WEEK**')
+        table.insert(weeks_content, '- **[Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md) ← THIS WEEK**')
       else
-        table.insert(lines, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
+        table.insert(weeks_content, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
       end
     end
   else
-    table.insert(lines, '_No entries yet_')
+    table.insert(weeks_content, '_No entries yet_')
   end
+  table.insert(weeks_content, '')
   
-  table.insert(lines, '')
-  table.insert(lines, '## Notes')
-  table.insert(lines, '')
-  table.insert(lines, '')
-  table.insert(lines, '')
-  table.insert(lines, '## TODO')
-  table.insert(lines, '')
-  table.insert(lines, '- [ ] ')
+  local lines
+  if #existing_lines > 0 then
+    local start_idx, end_idx = find_section_range(existing_lines, 'Weeks')
+    if start_idx then
+      -- Replace existing Weeks section
+      lines = {}
+      for i = 1, start_idx - 1 do
+        table.insert(lines, existing_lines[i])
+      end
+      for _, line in ipairs(weeks_content) do
+        table.insert(lines, line)
+      end
+      for i = end_idx + 1, #existing_lines do
+        table.insert(lines, existing_lines[i])
+      end
+    else
+      -- No Weeks section, insert after header
+      lines = { existing_lines[1], '' }
+      for _, line in ipairs(weeks_content) do
+        table.insert(lines, line)
+      end
+      for i = 2, #existing_lines do
+        table.insert(lines, existing_lines[i])
+      end
+    end
+  else
+    -- New file
+    lines = {
+      '# ' .. year,
+      '',
+    }
+    for _, line in ipairs(weeks_content) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, '## Notes')
+    table.insert(lines, '')
+    table.insert(lines, '')
+    table.insert(lines, '')
+    table.insert(lines, '## TODO')
+    table.insert(lines, '')
+    table.insert(lines, '- [ ] ')
+  end
   
   vim.cmd('edit ' .. filepath)
   vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
