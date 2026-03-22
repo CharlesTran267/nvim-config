@@ -129,6 +129,29 @@ function M.open_prev_week()
   open_week_offset(-1)
 end
 
+function M.open_next_day()
+  -- Find current file's date and open next day
+  local filename = vim.fn.expand('%:t:r')
+  local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
+  if y then
+    local current = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+    open_day(math.floor((current - os.time()) / 86400) + 1)
+  else
+    open_day(1) -- fallback to tomorrow
+  end
+end
+
+function M.open_prev_day()
+  local filename = vim.fn.expand('%:t:r')
+  local y, m, d = filename:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
+  if y then
+    local current = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+    open_day(math.floor((current - os.time()) / 86400) - 1)
+  else
+    open_day(-1) -- fallback to yesterday
+  end
+end
+
 function M.open_year()
   local year = os.date('%Y')
   local dir = string.format('%s/%s', base_path, year)
@@ -186,5 +209,41 @@ end, { desc = 'Refresh current week index' })
 vim.api.nvim_create_user_command('DiaryRefreshYear', function()
   M.refresh_year()
 end, { desc = 'Refresh current year index' })
+
+vim.api.nvim_create_user_command('DiaryNextDay', function()
+  M.open_next_day()
+end, { desc = 'Open next day diary' })
+
+vim.api.nvim_create_user_command('DiaryPrevDay', function()
+  M.open_prev_day()
+end, { desc = 'Open previous day diary' })
+
+vim.api.nvim_create_user_command('DiaryNextWeek', function()
+  M.open_next_week()
+end, { desc = 'Open next week index' })
+
+vim.api.nvim_create_user_command('DiaryPrevWeek', function()
+  M.open_prev_week()
+end, { desc = 'Open previous week index' })
+
+vim.api.nvim_create_user_command('DiaryToday', function()
+  M.open_today()
+end, { desc = 'Open today diary' })
+
+vim.api.nvim_create_user_command('DiaryYesterday', function()
+  M.open_yesterday()
+end, { desc = 'Open yesterday diary' })
+
+vim.api.nvim_create_user_command('DiaryTomorrow', function()
+  M.open_tomorrow()
+end, { desc = 'Open tomorrow diary' })
+
+vim.api.nvim_create_user_command('DiaryWeek', function()
+  M.open_week()
+end, { desc = 'Open current week index' })
+
+vim.api.nvim_create_user_command('DiaryYear', function()
+  M.open_year()
+end, { desc = 'Open current year index' })
 
 return M
