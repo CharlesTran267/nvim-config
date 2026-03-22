@@ -1,10 +1,124 @@
 local M = {}
 
 local base_path = '/home/charlestran/vimwiki/diary'
+local template_path = '/home/charlestran/vimwiki/diary/note_templates'
 
 local function ensure_dir(path)
   vim.fn.mkdir(path, 'p')
 end
+
+local function read_template(name)
+  local filepath = template_path .. '/' .. name .. '.md'
+  local lines = {}
+  local file = io.open(filepath, 'r')
+  if file then
+    for line in file:lines() do
+      table.insert(lines, line)
+    end
+    file:close()
+  end
+  return lines
+end
+
+local function process_template(template_lines, replacements)
+  local lines = {}
+  for _, line in ipairs(template_lines) do
+    local processed = line
+    for key, value in pairs(replacements) do
+      processed = processed:gsub('{{' .. key .. '}}', value)
+    end
+    table.insert(lines, processed)
+  end
+  return lines
+end
+
+local function create_default_templates()
+  ensure_dir(template_path)
+  
+  -- Week template
+  local week_template_path = template_path .. '/week.md'
+  if vim.fn.filereadable(week_template_path) == 0 then
+    local week_template = {
+      '# Week {{week}}: {{start_date}}-{{end_date}}',
+      '',
+      '## TOC',
+      '',
+      '- [Notes](#notes)',
+      '- [TODO](#todo)',
+      '{{day_links}}',
+      '',
+      '## Notes',
+      '',
+      '',
+      '',
+      '## TODO',
+      '',
+      '- [ ] ',
+      '',
+      '{{day_sections}}',
+    }
+    local file = io.open(week_template_path, 'w')
+    if file then
+      file:write(table.concat(week_template, '\n'))
+      file:close()
+    end
+  end
+  
+  -- Year template
+  local year_template_path = template_path .. '/year.md'
+  if vim.fn.filereadable(year_template_path) == 0 then
+    local year_template = {
+      '# {{year}}',
+      '',
+      '## TOC',
+      '',
+      '- [Weeks](#weeks)',
+      '- [Notes](#notes)',
+      '- [TODO](#todo)',
+      '',
+      '## Weeks',
+      '',
+      '{{week_links}}',
+      '',
+      '## Notes',
+      '',
+      '',
+      '',
+      '## TODO',
+      '',
+      '- [ ] ',
+    }
+    local file = io.open(year_template_path, 'w')
+    if file then
+      file:write(table.concat(year_template, '\n'))
+      file:close()
+    end
+  end
+  
+  -- General template
+  local general_template_path = template_path .. '/general.md'
+  if vim.fn.filereadable(general_template_path) == 0 then
+    local general_template = {
+      '# {{title}}',
+      '',
+      '## Notes',
+      '',
+      '',
+      '',
+      '## TODO',
+      '',
+      '- [ ] ',
+    }
+    local file = io.open(general_template_path, 'w')
+    if file then
+      file:write(table.concat(general_template, '\n'))
+      file:close()
+    end
+  end
+end
+
+-- Initialize templates on load
+create_default_templates()
 
 local function get_week_number(date)
   return os.date('%W', date)
@@ -62,6 +176,34 @@ local function get_day_name(date)
   local wday = os.date('*t', date).wday
   local names = { 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' }
   return names[wday]
+end
+
+local function generate_day_links(monday, today)
+  local links = {}
+  for i = 0, 6 do
+    local day_time = monday + (i * 86400)
+    local day_str = os.date('%Y-%m-%d', day_time)
+    local day_name = get_day_name(day_time)
+    local anchor = string.lower(day_name) .. '-' .. day_str
+    local suffix = day_str == today and ' ← TODAY' or ''
+    table.insert(links, '- [' .. day_name .. ' ' .. day_str .. suffix .. '](#' .. anchor .. ')')
+  end
+  return table.concat(links, '\n')
+end
+
+local function generate_day_sections(monday, today)
+  local sections = {}
+  for i = 0, 6 do
+    local day_time = monday + (i * 86400)
+    local day_str = os.date('%Y-%m-%d', day_time)
+    local day_name = get_day_name(day_time)
+    local suffix = day_str == today and ' ← TODAY' or ''
+    table.insert(sections, '## ' .. day_name .. ' ' .. day_str .. suffix)
+    table.insert(sections, '')
+    table.insert(sections, '')
+    table.insert(sections, '')
+  end
+  return table.concat(sections, '\n')
 end
 
 local function open_week_offset(offset)
