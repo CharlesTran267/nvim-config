@@ -1,7 +1,10 @@
 return {
   'vimwiki/vimwiki',
-  event = 'BufEnter *.wiki',
+  event = 'BufEnter *.md',
   keys = {
+    { '<leader>w<leader>d', function() require('config.diary').open_today() end, desc = 'Open today diary' },
+    { '<leader>w<leader>w', function() require('config.diary').open_week() end, desc = 'Open this week' },
+    { '<leader>w<leader>Y', function() require('config.diary').open_year() end, desc = 'Open this year' },
     { '<leader>ww', '<cmd>VimwikiIndex<cr>', desc = 'Open Vimwiki Index' },
     { '<leader>wt', '<cmd>VimwikiTabIndex<cr>', desc = 'Open Vimwiki Index in new tab' },
     { '<leader>ws', '<cmd>VimwikiUISelect<cr>', desc = 'Select Vimwiki' },
