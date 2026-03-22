@@ -26,10 +26,11 @@ local function scan_files(dir, pattern)
   return files
 end
 
-function M.open_today()
-  local year = os.date('%Y')
-  local week = get_week_number(os.time())
-  local day = os.date('%Y-%m-%d')
+local function open_day(offset)
+  local target = os.time() + (offset * 86400)
+  local year = os.date('%Y', target)
+  local week = get_week_number(target)
+  local day = os.date('%Y-%m-%d', target)
   local dir = string.format('%s/%s/week%s', base_path, year, week)
   local filepath = dir .. '/' .. day .. '.md'
   
@@ -53,17 +54,29 @@ function M.open_today()
   end
 end
 
-function M.open_week()
-  local year = os.date('%Y')
-  local week = get_week_number(os.time())
+function M.open_today()
+  open_day(0)
+end
+
+function M.open_yesterday()
+  open_day(-1)
+end
+
+function M.open_tomorrow()
+  open_day(1)
+end
+
+local function open_week_offset(offset)
+  local target = os.time() + (offset * 7 * 86400)
+  local year = os.date('%Y', target)
+  local week = get_week_number(target)
   local dir = string.format('%s/%s/week%s', base_path, year, week)
   ensure_dir(dir)
   
   -- Calculate week start (Monday) and end (Sunday) dates
-  local today = os.time()
-  local wday = os.date('*t', today).wday
-  local days_since_monday = (wday + 5) % 7  -- Monday = 0, Sunday = 6
-  local monday = today - (days_since_monday * 86400)
+  local wday = os.date('*t', target).wday
+  local days_since_monday = (wday + 5) % 7
+  local monday = target - (days_since_monday * 86400)
   local sunday = monday + (6 * 86400)
   local start_date = os.date('%Y-%m-%d', monday)
   local end_date = os.date('%Y-%m-%d', sunday)
@@ -100,6 +113,18 @@ function M.open_week()
     vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
     vim.cmd('write')
   end
+end
+
+function M.open_week()
+  open_week_offset(0)
+end
+
+function M.open_next_week()
+  open_week_offset(1)
+end
+
+function M.open_prev_week()
+  open_week_offset(-1)
 end
 
 function M.open_year()
