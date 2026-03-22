@@ -18,5 +18,11 @@ return {
     }
     -- Prevent vimwiki from hijacking all markdown files
     vim.g.vimwiki_global_ext = 0
+    -- Disable key mappings that conflict with other plugins
+    vim.g.vimwiki_key_mappings = {
+      table_mappings = 0,  -- fixes Tab in insert mode
+      table_format = 0,
+      lists = 0,           -- fixes the `-` key conflict
+    }
   end,
 }
