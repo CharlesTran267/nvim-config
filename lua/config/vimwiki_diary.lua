@@ -202,47 +202,47 @@ function M.refresh_year()
   M.open_year()
 end
 
-vim.api.nvim_create_user_command('DiaryRefreshWeek', function()
+vim.api.nvim_create_user_command('WikiRefreshWeek', function()
   M.refresh_week()
 end, { desc = 'Refresh current week index' })
 
-vim.api.nvim_create_user_command('DiaryRefreshYear', function()
+vim.api.nvim_create_user_command('WikiRefreshYear', function()
   M.refresh_year()
 end, { desc = 'Refresh current year index' })
 
-vim.api.nvim_create_user_command('DiaryNextDay', function()
+vim.api.nvim_create_user_command('WikiNextDay', function()
   M.open_next_day()
 end, { desc = 'Open next day diary' })
 
-vim.api.nvim_create_user_command('DiaryPrevDay', function()
+vim.api.nvim_create_user_command('WikiPrevDay', function()
   M.open_prev_day()
 end, { desc = 'Open previous day diary' })
 
-vim.api.nvim_create_user_command('DiaryNextWeek', function()
+vim.api.nvim_create_user_command('WikiNextWeek', function()
   M.open_next_week()
 end, { desc = 'Open next week index' })
 
-vim.api.nvim_create_user_command('DiaryPrevWeek', function()
+vim.api.nvim_create_user_command('WikiPrevWeek', function()
   M.open_prev_week()
 end, { desc = 'Open previous week index' })
 
-vim.api.nvim_create_user_command('DiaryToday', function()
+vim.api.nvim_create_user_command('WikiToday', function()
   M.open_today()
 end, { desc = 'Open today diary' })
 
-vim.api.nvim_create_user_command('DiaryYesterday', function()
+vim.api.nvim_create_user_command('WikiYesterday', function()
   M.open_yesterday()
 end, { desc = 'Open yesterday diary' })
 
-vim.api.nvim_create_user_command('DiaryTomorrow', function()
+vim.api.nvim_create_user_command('WikiTomorrow', function()
   M.open_tomorrow()
 end, { desc = 'Open tomorrow diary' })
 
-vim.api.nvim_create_user_command('DiaryWeek', function()
+vim.api.nvim_create_user_command('WikiWeek', function()
   M.open_week()
 end, { desc = 'Open current week index' })
 
-vim.api.nvim_create_user_command('DiaryYear', function()
+vim.api.nvim_create_user_command('WikiYear', function()
   M.open_year()
 end, { desc = 'Open current year index' })
 
