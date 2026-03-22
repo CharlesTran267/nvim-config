@@ -210,7 +210,7 @@ local function open_week_offset(offset)
   local target = os.time() + (offset * 7 * 86400)
   local year = os.date('%Y', target)
   local week = get_week_number(target)
-  local dir = string.format('%s/%s/week%s', base_path, year, week)
+  local dir = string.format('%s/%s', base_path, year)
   ensure_dir(dir)
   
   -- Calculate week start (Monday) and end (Sunday) dates
@@ -221,7 +221,7 @@ local function open_week_offset(offset)
   local start_date = os.date('%Y-%m-%d', monday)
   local end_date = os.date('%Y-%m-%d', sunday)
   
-  local filepath = dir .. '/index.md'
+  local filepath = dir .. '/week_' .. week .. '.md'
   local today = os.date('%Y-%m-%d')
   
   local existing_lines = read_file_lines(filepath)
@@ -230,35 +230,17 @@ local function open_week_offset(offset)
     -- File exists, just open it
     vim.cmd('edit ' .. filepath)
   else
-    -- New file - generate all days
-    local lines = {
-      '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
-      '',
+    -- New file - use template
+    local template = read_template('week')
+    local replacements = {
+      week = week,
+      start_date = start_date,
+      end_date = end_date,
+      day_links = generate_day_links(monday, today),
+      day_sections = generate_day_sections(monday, today),
     }
     
-    -- Generate all 7 days (Monday to Sunday)
-    for i = 0, 6 do
-      local day_time = monday + (i * 86400)
-      local day_str = os.date('%Y-%m-%d', day_time)
-      local day_name = get_day_name(day_time)
-      
-      if day_str == today then
-        table.insert(lines, '## ' .. day_name .. ' ' .. day_str .. ' ← TODAY')
-      else
-        table.insert(lines, '## ' .. day_name .. ' ' .. day_str)
-      end
-      table.insert(lines, '')
-      table.insert(lines, '')
-      table.insert(lines, '')
-    end
-    
-    table.insert(lines, '## Notes')
-    table.insert(lines, '')
-    table.insert(lines, '')
-    table.insert(lines, '')
-    table.insert(lines, '## TODO')
-    table.insert(lines, '')
-    table.insert(lines, '- [ ] ')
+    local lines = process_template(template, replacements)
     
     vim.cmd('edit ' .. filepath)
     vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
@@ -278,24 +260,13 @@ function M.open_prev_week()
   open_week_offset(-1)
 end
 
-function M.open_year()
-  local year = os.date('%Y')
-  local dir = string.format('%s/%s', base_path, year)
-  ensure_dir(dir)
+local function generate_week_links(dir, year, current_week)
+  local weeks = scan_files(dir, '^week_%d+%.md$')
+  local links = {}
   
-  local filepath = dir .. '/index.md'
-  local weeks = scan_files(dir, '^week%d+$')
-  local current_week = tonumber(get_week_number(os.time()))
-  
-  local existing_lines = read_file_lines(filepath)
-  
-  -- Build new Weeks section content
-  local weeks_content = {}
-  table.insert(weeks_content, '## Weeks')
-  table.insert(weeks_content, '')
   if #weeks > 0 then
     for _, w in ipairs(weeks) do
-      local wnum = tonumber(w:match('week(%d+)'))
+      local wnum = tonumber(w:match('week_(%d+)%.md'))
       -- Calculate the Monday of this week number
       local jan1 = os.time({ year = tonumber(year), month = 1, day = 1 })
       local jan1_wday = os.date('*t', jan1).wday
@@ -305,18 +276,39 @@ function M.open_year()
       local start_date = os.date('%Y-%m-%d', monday)
       local end_date = os.date('%Y-%m-%d', sunday)
       if wnum == current_week then
-        table.insert(weeks_content, '- **[Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md) ← THIS WEEK**')
+        table.insert(links, '- **[Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. ') ← THIS WEEK**')
       else
-        table.insert(weeks_content, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
+        table.insert(links, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. ')')
       end
     end
   else
-    table.insert(weeks_content, '_No entries yet_')
+    table.insert(links, '_No entries yet_')
   end
-  table.insert(weeks_content, '')
+  
+  return table.concat(links, '\n')
+end
+
+function M.open_year()
+  local year = os.date('%Y')
+  local dir = string.format('%s/%s', base_path, year)
+  ensure_dir(dir)
+  
+  local filepath = dir .. '/index.md'
+  local current_week = tonumber(get_week_number(os.time()))
+  
+  local existing_lines = read_file_lines(filepath)
+  
+  local week_links = generate_week_links(dir, year, current_week)
   
   local lines
   if #existing_lines > 0 then
+    -- Build new Weeks section content
+    local weeks_content_lines = { '## Weeks', '' }
+    for link in (week_links .. '\n'):gmatch('([^\n]*)\n') do
+      table.insert(weeks_content_lines, link)
+    end
+    table.insert(weeks_content_lines, '')
+    
     local start_idx, end_idx = find_section_range(existing_lines, 'Weeks')
     if start_idx then
       -- Replace existing Weeks section
@@ -324,7 +316,7 @@ function M.open_year()
       for i = 1, start_idx - 1 do
         table.insert(lines, existing_lines[i])
       end
-      for _, line in ipairs(weeks_content) do
+      for _, line in ipairs(weeks_content_lines) do
         table.insert(lines, line)
       end
       for i = end_idx + 1, #existing_lines do
@@ -333,7 +325,7 @@ function M.open_year()
     else
       -- No Weeks section, insert after header
       lines = { existing_lines[1], '' }
-      for _, line in ipairs(weeks_content) do
+      for _, line in ipairs(weeks_content_lines) do
         table.insert(lines, line)
       end
       for i = 2, #existing_lines do
@@ -341,21 +333,14 @@ function M.open_year()
       end
     end
   else
-    -- New file
-    lines = {
-      '# ' .. year,
-      '',
+    -- New file - use template
+    local template = read_template('year')
+    local replacements = {
+      year = year,
+      week_links = week_links,
     }
-    for _, line in ipairs(weeks_content) do
-      table.insert(lines, line)
-    end
-    table.insert(lines, '## Notes')
-    table.insert(lines, '')
-    table.insert(lines, '')
-    table.insert(lines, '')
-    table.insert(lines, '## TODO')
-    table.insert(lines, '')
-    table.insert(lines, '- [ ] ')
+    
+    lines = process_template(template, replacements)
   end
   
   vim.cmd('edit ' .. filepath)
