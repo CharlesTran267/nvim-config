@@ -101,6 +101,8 @@ return {
             break
           end
         end
+
+        last_terminal = 'general'
       end
     end, { desc = 'Quit terminal' })
 
