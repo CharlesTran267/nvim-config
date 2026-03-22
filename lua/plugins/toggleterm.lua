@@ -35,6 +35,8 @@ return {
     local terminals = {}
     local custom_shells = {} -- Track user-created shells
     local last_terminal = 'general'
+    local terminal_history = { 'general' } -- Track visited terminals in order
+    local history_index = 1
 
     local function get_terminal(name)
       if not terminals[name] then
@@ -46,6 +48,18 @@ return {
 
     local function toggle_terminal(name)
       local term = get_terminal(name)
+      -- Update history
+      if name ~= last_terminal then
+        -- Remove if already in history, then add to end
+        for i, n in ipairs(terminal_history) do
+          if n == name then
+            table.remove(terminal_history, i)
+            break
+          end
+        end
+        table.insert(terminal_history, name)
+        history_index = #terminal_history
+      end
       last_terminal = name
       term:toggle()
     end
@@ -93,6 +107,17 @@ return {
         current_term:shutdown()
         terminals[last_terminal] = nil -- Remove from cache so it starts fresh next time
 
+        -- Remove from history
+        for i, n in ipairs(terminal_history) do
+          if n == last_terminal then
+            table.remove(terminal_history, i)
+            if history_index > #terminal_history then
+              history_index = math.max(1, #terminal_history)
+            end
+            break
+          end
+        end
+
         -- If it's a custom shell, remove it from the list entirely
         for i, name in ipairs(custom_shells) do
           if name == last_terminal then
@@ -102,7 +127,7 @@ return {
           end
         end
 
-        last_terminal = 'general'
+        last_terminal = terminal_history[history_index] or 'general'
       end
     end, { desc = 'Quit terminal' })
 
@@ -110,6 +135,34 @@ return {
     vim.keymap.set({ 'n', 't' }, '<A-g>', function()
       toggle_terminal('general')
     end, { desc = 'Toggle general terminal' })
+
+    -- Navigate to previous terminal in history
+    vim.keymap.set({ 'n', 't' }, '<A-p>', function()
+      if history_index > 1 then
+        history_index = history_index - 1
+        local name = terminal_history[history_index]
+        local term = get_terminal(name)
+        if terminals[last_terminal] then
+          terminals[last_terminal]:close()
+        end
+        last_terminal = name
+        term:open()
+      end
+    end, { desc = 'Previous terminal (history)' })
+
+    -- Navigate to next terminal in history
+    vim.keymap.set({ 'n', 't' }, '<A-n>', function()
+      if history_index < #terminal_history then
+        history_index = history_index + 1
+        local name = terminal_history[history_index]
+        local term = get_terminal(name)
+        if terminals[last_terminal] then
+          terminals[last_terminal]:close()
+        end
+        last_terminal = name
+        term:open()
+      end
+    end, { desc = 'Next terminal (history)' })
 
     -- Create new shell (prompts for name)
     vim.keymap.set({ 'n', 't' }, '<A-S-n>', function()
