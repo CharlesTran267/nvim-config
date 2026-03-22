@@ -102,7 +102,6 @@ return {
           end
         end
       end
-      vim.cmd 'close'
     end, { desc = 'Quit terminal' })
 
     -- Create new shell (prompts for name)
