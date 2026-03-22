@@ -11,7 +11,7 @@ return {
   init = function()
     vim.g.vimwiki_list = {
       {
-        path = '~/vimwiki/',
+        path = '/home/charlestran/vimwiki/',
         syntax = 'markdown',
         ext = '.md',
       },
