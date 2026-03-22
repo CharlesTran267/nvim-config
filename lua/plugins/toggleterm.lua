@@ -25,6 +25,7 @@ return {
 
     -- Predefined terminal configs (lazy - only created when first accessed)
     local terminal_configs = {
+      general = { cmd = vim.o.shell, display_name = 'general', direction = 'float' },
       lazygit = { cmd = 'lazygit', display_name = 'lazygit', direction = 'float' },
       aider = { cmd = 'aider', display_name = 'aider', direction = 'float' },
       codex = { cmd = 'codex', display_name = 'codex', direction = 'float' },
@@ -32,11 +33,13 @@ return {
     }
 
     local terminals = {}
-    local last_terminal = nil
+    local custom_shells = {} -- Track user-created shells
+    local last_terminal = 'general'
 
     local function get_terminal(name)
       if not terminals[name] then
-        terminals[name] = Terminal:new(terminal_configs[name])
+        local config = terminal_configs[name] or { cmd = vim.o.shell, display_name = name, direction = 'float' }
+        terminals[name] = Terminal:new(config)
       end
       return terminals[name]
     end
@@ -47,24 +50,36 @@ return {
       term:toggle()
     end
 
-    -- Toggle last-used terminal (defaults to a general terminal)
+    local function create_new_shell(name)
+      terminal_configs[name] = { cmd = vim.o.shell, display_name = name, direction = 'float' }
+      table.insert(custom_shells, name)
+      toggle_terminal(name)
+    end
+
+    -- Toggle last-used terminal (defaults to general)
     vim.keymap.set({ 'n', 't' }, '<A-i>', function()
-      if last_terminal then
-        toggle_terminal(last_terminal)
-      else
-        vim.cmd 'ToggleTerm direction=float'
-      end
+      toggle_terminal(last_terminal)
     end, { desc = 'Toggle last terminal' })
 
     -- Terminal picker
     vim.keymap.set({ 'n', 't' }, '<A-s>', function()
-      local options = { 'lazygit', 'aider', 'codex', 'aichat', 'terminal', 'new terminal' }
+      local options = { 'general', 'lazygit', 'aider', 'codex', 'aichat' }
+      -- Add custom shells to the list
+      for _, name in ipairs(custom_shells) do
+        table.insert(options, name)
+      end
+      table.insert(options, '+ new shell')
+
       vim.ui.select(options, { prompt = 'Select terminal:' }, function(choice)
         if not choice then
           return
         end
-        if choice == 'terminal' then
-          vim.cmd 'ToggleTerm direction=float'
+        if choice == '+ new shell' then
+          vim.ui.input({ prompt = 'Shell name: ' }, function(name)
+            if name and name ~= '' then
+              create_new_shell(name)
+            end
+          end)
         else
           toggle_terminal(choice)
         end
@@ -74,7 +89,13 @@ return {
     -- Close current terminal
     vim.keymap.set('t', '<A-q>', '<Cmd>close<CR>', { desc = 'Close terminal' })
 
-    -- Create new terminal
-    vim.keymap.set({ 'n', 't' }, '<A-n>', '<Cmd>ToggleTerm direction=float<CR>', { desc = 'New terminal' })
+    -- Create new shell (prompts for name)
+    vim.keymap.set({ 'n', 't' }, '<A-n>', function()
+      vim.ui.input({ prompt = 'Shell name: ' }, function(name)
+        if name and name ~= '' then
+          create_new_shell(name)
+        end
+      end)
+    end, { desc = 'New shell' })
   end,
 }
