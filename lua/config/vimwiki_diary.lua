@@ -27,7 +27,10 @@ local function process_template(template_lines, replacements)
     for key, value in pairs(replacements) do
       processed = processed:gsub('{{' .. key .. '}}', value)
     end
-    table.insert(lines, processed)
+    -- Split any embedded newlines into separate lines
+    for subline in (processed .. '\n'):gmatch('([^\n]*)\n') do
+      table.insert(lines, subline)
+    end
   end
   return lines
 end
