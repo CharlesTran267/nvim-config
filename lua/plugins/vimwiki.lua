@@ -5,7 +5,7 @@ return {
     { '<leader>w<leader>w', function() require('config.vimwiki_diary').open_week() end, desc = 'Open this week' },
     { '<leader>w<leader>n', function() require('config.vimwiki_diary').open_next_week() end, desc = 'Open next week' },
     { '<leader>w<leader>p', function() require('config.vimwiki_diary').open_prev_week() end, desc = 'Open previous week' },
-    { '<leader>w<leader>Y', function() require('config.vimwiki_diary').open_year() end, desc = 'Open this year' },
+    { '<leader>w<leader>y', function() require('config.vimwiki_diary').open_year() end, desc = 'Open this year' },
     { '<leader>w<leader>r', function() require('config.vimwiki_diary').refresh_year() end, desc = 'Refresh year index' },
     { '<leader>ww', '<cmd>VimwikiIndex<cr>', desc = 'Open Vimwiki Index' },
     { '<leader>wt', '<cmd>VimwikiTabIndex<cr>', desc = 'Open Vimwiki Index in new tab' },
