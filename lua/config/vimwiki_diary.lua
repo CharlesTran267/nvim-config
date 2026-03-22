@@ -83,6 +83,7 @@ local function open_week_offset(offset)
   
   local filepath = dir .. '/index.md'
   local days = scan_files(dir, '^%d%d%d%d%-%d%d%-%d%d%.md$')
+  local today = os.date('%Y-%m-%d')
   
   local lines = {
     '# Week ' .. week .. ': ' .. start_date .. '-' .. end_date,
@@ -93,7 +94,12 @@ local function open_week_offset(offset)
   
   if #days > 0 then
     for _, day in ipairs(days) do
-      table.insert(lines, '- [' .. day:gsub('%.md$', '') .. '](' .. day .. ')')
+      local day_name = day:gsub('%.md$', '')
+      if day_name == today then
+        table.insert(lines, '- **[' .. day_name .. '](' .. day .. ') ← TODAY**')
+      else
+        table.insert(lines, '- [' .. day_name .. '](' .. day .. ')')
+      end
     end
   else
     table.insert(lines, '_No entries yet_')
@@ -184,6 +190,7 @@ function M.open_year()
   
   local filepath = dir .. '/index.md'
   local weeks = scan_files(dir, '^week%d+$')
+  local current_week = tonumber(get_week_number(os.time()))
   
   local lines = {
     '# ' .. year,
@@ -203,7 +210,11 @@ function M.open_year()
       local sunday = monday + (6 * 86400)
       local start_date = os.date('%Y-%m-%d', monday)
       local end_date = os.date('%Y-%m-%d', sunday)
-      table.insert(lines, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
+      if wnum == current_week then
+        table.insert(lines, '- **[Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md) ← THIS WEEK**')
+      else
+        table.insert(lines, '- [Week ' .. wnum .. ': ' .. start_date .. '-' .. end_date .. '](' .. w .. '/index.md)')
+      end
     end
   else
     table.insert(lines, '_No entries yet_')
