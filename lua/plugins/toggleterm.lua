@@ -5,31 +5,19 @@ return {
     local toggleterm = require 'toggleterm'
     local Terminal = require('toggleterm.terminal').Terminal
 
-    toggleterm.setup {
-      direction = 'float',
-      highlights = {
-        FloatBorder = {
-          guifg = '#8aadf4', -- Catppuccin Macchiato blue
-        },
-      },
-      winbar = {
-        enabled = true,
-        name_formatter = function(term)
-          if term.display_name then
-            return ' ' .. term.id .. ': ' .. term.display_name
-          end
-          return ' Terminal ' .. term.id
-        end,
-      },
-    }
+    -- With TMUX cleared (see setup env below), claude stops clamping itself to
+    -- 256 colors and its 24-bit output shifts hues through tmux. FORCE_COLOR=2
+    -- restores the clamp. Per-terminal env REPLACES setup env, so repeat it.
+    local claude_env = { TMUX = '', TMUX_PANE = '', TERM_PROGRAM = '', FORCE_COLOR = '2' }
 
     -- Predefined terminal configs (lazy - only created when first accessed)
     local terminal_configs = {
-      general = { cmd = vim.o.shell, display_name = 'general', direction = 'float' },
-      lazygit = { cmd = 'lazygit', display_name = 'lazygit', direction = 'float' },
-      aider = { cmd = 'aider', display_name = 'aider', direction = 'float' },
-      codex = { cmd = 'codex', display_name = 'codex', direction = 'float' },
-      aichat = { cmd = 'aichat', display_name = 'aichat', direction = 'float' },
+      general = { cmd = vim.o.shell, direction = 'float' },
+      lazygit = { cmd = 'lazygit', direction = 'float' },
+      aider = { cmd = 'aider', direction = 'float' },
+      codex = { cmd = 'codex', direction = 'float' },
+      ['claude-random'] = { cmd = 'claude', direction = 'float', env = claude_env },
+      claude = { cmd = 'claude', direction = 'float', env = claude_env },
     }
 
     local terminals = {}
@@ -37,6 +25,57 @@ return {
     local last_terminal = 'general'
     local terminal_history = { 'general' } -- Track visited terminals in order
     local history_index = 1
+
+    -- Build the winbar string for a terminal (called dynamically each redraw).
+    -- Toggleterm skips its built-in winbar for floats, so we set it manually.
+    _G.__toggleterm_custom_winbar = function(current_id)
+      local parts = {}
+      for _, name in ipairs(terminal_history) do
+        local t = terminals[name]
+        if t then
+          if t.id == current_id then
+            table.insert(parts, '%#ToggletermWinbarSel# ▶ ' .. name .. ' %*')
+          else
+            table.insert(parts, '%#ToggletermWinbar#   ' .. name .. ' %*')
+          end
+        end
+      end
+      if #parts == 0 then return ' ' end
+      return '%#ToggletermWinbar# ' .. table.concat(parts, '') .. '%#ToggletermWinbar#%='
+    end
+
+    -- Give the winbar a distinct background so it doesn't blend into terminal content
+    local ok, palette = pcall(require, 'catppuccin.palettes')
+    local c = ok and palette.get_palette() or {}
+    vim.api.nvim_set_hl(0, 'ToggletermWinbar', { bg = c.mantle or '#1e2030', fg = c.subtext0 or '#a5adcb', bold = true })
+    vim.api.nvim_set_hl(0, 'ToggletermWinbarSel', { bg = c.surface0 or '#363a4f', fg = c.red or '#ed8796', bold = true })
+
+    toggleterm.setup {
+      direction = 'float',
+      start_in_insert = true,
+      -- nvim's :terminal is the real parent, not tmux. With TMUX set, TUIs wrap
+      -- OSC 52 clipboard writes in tmux passthrough, which nvim paints as text.
+      env = { TMUX = '', TMUX_PANE = '', TERM_PROGRAM = '' },
+      winbar = { enabled = false }, -- disable built-in winbar; we set our own in on_open
+      highlights = {
+        FloatBorder = {
+          guifg = '#8aadf4', -- Catppuccin Macchiato blue
+        },
+      },
+      on_open = function(term)
+        if term.window and vim.api.nvim_win_is_valid(term.window) then
+          vim.wo[term.window].winbar = string.format('%%{%%v:lua.__toggleterm_custom_winbar(%d)%%}', term.id)
+        end
+      end,
+    }
+
+    -- Mouse drag only reaches the child while nvim is in Terminal mode, so landing in
+    -- terminal-normal breaks claude's drag-select as well as feeling wrong. An autocmd has
+    -- no race window; vim.schedule(startinsert) in on_open lost to fast toggles/keypresses.
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+      pattern = 'term://*',
+      callback = function() vim.cmd 'startinsert' end,
+    })
 
     local function get_terminal(name)
       if not terminals[name] then
@@ -77,7 +116,7 @@ return {
 
     -- Terminal picker
     vim.keymap.set({ 'n', 't' }, '<A-s>', function()
-      local options = { 'general', 'lazygit', 'aider', 'codex', 'aichat' }
+      local options = { 'general', 'lazygit', 'aider', 'codex', 'claude-random', 'claude' }
       -- Add custom shells to the list
       for _, name in ipairs(custom_shells) do
         table.insert(options, name)
@@ -136,32 +175,30 @@ return {
       toggle_terminal('general')
     end, { desc = 'Toggle general terminal' })
 
-    -- Navigate to previous terminal in history
+    -- Navigate to previous terminal in history (wraps around)
     vim.keymap.set({ 'n', 't' }, '<A-p>', function()
-      if history_index > 1 then
-        history_index = history_index - 1
-        local name = terminal_history[history_index]
-        local term = get_terminal(name)
-        if terminals[last_terminal] then
-          terminals[last_terminal]:close()
-        end
-        last_terminal = name
-        term:open()
+      if #terminal_history < 2 then return end
+      history_index = (history_index - 2) % #terminal_history + 1
+      local name = terminal_history[history_index]
+      local term = get_terminal(name)
+      if terminals[last_terminal] then
+        terminals[last_terminal]:close()
       end
+      last_terminal = name
+      term:open()
     end, { desc = 'Previous terminal (history)' })
 
-    -- Navigate to next terminal in history
+    -- Navigate to next terminal in history (wraps around)
     vim.keymap.set({ 'n', 't' }, '<A-n>', function()
-      if history_index < #terminal_history then
-        history_index = history_index + 1
-        local name = terminal_history[history_index]
-        local term = get_terminal(name)
-        if terminals[last_terminal] then
-          terminals[last_terminal]:close()
-        end
-        last_terminal = name
-        term:open()
+      if #terminal_history < 2 then return end
+      history_index = history_index % #terminal_history + 1
+      local name = terminal_history[history_index]
+      local term = get_terminal(name)
+      if terminals[last_terminal] then
+        terminals[last_terminal]:close()
       end
+      last_terminal = name
+      term:open()
     end, { desc = 'Next terminal (history)' })
 
     -- Create new shell (prompts for name)

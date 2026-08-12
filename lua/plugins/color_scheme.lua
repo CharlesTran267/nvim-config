@@ -10,6 +10,7 @@ return {
       require('catppuccin').setup {
         flavour = transparent and 'macchiato',
         transparent_background = transparent,
+        float = { transparent = transparent },
         styles = {
           keywords = { 'bold' },
           functions = { 'italic' },
@@ -27,7 +28,7 @@ return {
           notify = true,
           neotest = true,
           which_key = true,
-          telescope = { style = transparent and nil or 'nvchad' },
+          telescope = { enabled = true, style = transparent and nil or 'nvchad' },
         },
         custom_highlights = function(colors)
           return {

@@ -12,6 +12,9 @@ vim.opt.relativenumber = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
 
+-- nvim 0.11+ blinks the terminal-mode cursor by default; keep it steady
+vim.opt.guicursor:append 't:block-blinkon0-TermCursor'
+
 -- Don't show the mode, since it's already in the status line
 vim.opt.showmode = false
 
@@ -71,10 +74,19 @@ vim.opt.tabstop = 2
 vim.opt.expandtab = true
 
 -- Python-specific
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "python",
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'python', 'lua' },
   callback = function()
     vim.opt_local.shiftwidth = 4
     vim.opt_local.tabstop = 4
   end,
 })
+
+-- Folding
+vim.g.markdown_folding = 1
+vim.opt.foldmethod = 'expr' -- Use expression-based folding
+vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.opt.foldlevel = 99 -- Open all folds by default on file open
+
+-- Better diff quality (word-level alignment, closer to GitHub/delta rendering)
+vim.opt.diffopt:append { 'linematch:60', 'algorithm:histogram', 'indent-heuristic' }

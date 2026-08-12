@@ -85,7 +85,7 @@ return { -- LSP Configuration & Plugins
 
         -- Fuzzy find all the symbols in your current workspace.
         --  Similar to document symbols, except searches over your entire project.
-        map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+        -- map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
 
         -- Rename the variable under your cursor.
         --  Most Language Servers support renaming across files, etc.
@@ -110,7 +110,7 @@ return { -- LSP Configuration & Plugins
         -- When you move your cursor, the highlights will be cleared (the second autocommand).
         local client = vim.lsp.get_client_by_id(event.data.client_id)
         if client and client.name == 'ruff' then
-          -- Disable hover in favor of Pyright
+          -- Disable hover in favor of pyright
           client.server_capabilities.hoverProvider = false
         end
         if client and client.server_capabilities.documentHighlightProvider then
@@ -152,6 +152,7 @@ return { -- LSP Configuration & Plugins
         },
       },
       -- gopls = {},
+      -- ty = {},
       pyright = {
         settings = {
           pyright = {
@@ -192,6 +193,7 @@ return { -- LSP Configuration & Plugins
         },
       },
 
+      marksman = {},
     }
 
     -- Ensure the servers and tools above are installed
@@ -210,22 +212,31 @@ return { -- LSP Configuration & Plugins
     })
     require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
-    require('mason-lspconfig').setup {
-      handlers = {
-        function(server_name)
-          local server = servers[server_name] or {}
-          -- This handles overriding only values explicitly passed
-          -- by the server configuration above. Useful when disabling
-          -- certain features of an LSP (for example, turning off formatting for tsserver)
-          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-          require('lspconfig')[server_name].setup(server)
-        end,
-      },
-    }
+    -- -- ty isn't shipped in this version of nvim-lspconfig and isn't in
+    -- -- mason-lspconfig v1.x's server mappings, so register + setup it manually.
+    -- require('lspconfig.configs').ty = {
+    --   default_config = {
+    --     cmd = { 'ty', 'server' },
+    --     filetypes = { 'python' },
+    --     root_dir = require('lspconfig.util').root_pattern('pyproject.toml', 'ty.toml', '.git'),
+    --     single_file_support = true,
+    --   },
+    -- }
+
+    require('mason-lspconfig').setup {}
+
+    -- nvim 0.11+ native LSP config: merges with nvim-lspconfig's bundled defaults
+    for server_name, server in pairs(servers) do
+      -- This handles overriding only values explicitly passed
+      -- by the server configuration above. Useful when disabling
+      -- certain features of an LSP (for example, turning off formatting for tsserver)
+      server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+      vim.lsp.config(server_name, server)
+      vim.lsp.enable(server_name)
+    end
 
     -- Setup cmake-language-server manually (system-installed)
-    require('lspconfig').cmake.setup {
-      capabilities = capabilities,
-    }
+    vim.lsp.config('cmake', { capabilities = capabilities })
+    vim.lsp.enable 'cmake'
   end,
 }

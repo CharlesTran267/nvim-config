@@ -23,6 +23,7 @@ return {
 
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
+    'mfussenegger/nvim-dap-python',
   },
   config = function()
     local dap = require 'dap'
@@ -42,6 +43,7 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         -- 'delve',
+        'cpptools', -- gdb DAP wrapper (system gdb 9.2 has no native DAP, needs 14+)
       },
     }
 
@@ -86,5 +88,31 @@ return {
 
     -- Install golang specific config
     require('dap-go').setup()
+
+    -- Python: use debugpy from the eureka venv so it matches the app interpreter
+    local venv_python = '/home/ci/python-venv/bin/python3'
+    require('dap-python').setup(venv_python)
+    table.insert(dap.configurations.python, {
+      type = 'python',
+      request = 'attach',
+      name = 'Attach to ec_gui (debugpy :5678)',
+      connect = { host = '127.0.0.1', port = 5678 },
+      justMyCode = false,
+    })
+
+    -- C++: attach gdb (via cpptools/cppdbg) to a running process, e.g. ec_gui
+    dap.configurations.cpp = {
+      {
+        name = 'Attach gdb to process',
+        type = 'cppdbg',
+        request = 'attach',
+        program = venv_python,
+        processId = require('dap.utils').pick_process,
+        MIMode = 'gdb',
+        setupCommands = {
+          { text = '-enable-pretty-printing', ignoreFailures = true },
+        },
+      },
+    }
   end,
 }

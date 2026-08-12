@@ -1,7 +1,7 @@
 return { -- Fuzzy Finder (files, lsp, etc)
   'nvim-telescope/telescope.nvim',
   event = 'VimEnter',
-  branch = '0.1.x',
+  version = '^0.2', -- 0.1.x is dead (tip = May 2024) and calls nvim-treesitter master's ft_to_lang
   dependencies = {
     'nvim-lua/plenary.nvim',
     { -- If encountering errors, see telescope-fzf-native README for installation instructions
@@ -104,6 +104,8 @@ return { -- Fuzzy Finder (files, lsp, etc)
     local builtin = require 'telescope.builtin'
     vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
     vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
+    vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
+    vim.keymap.set('n', '<leader>sC', builtin.command_history, { desc = '[S]earch [C]ommand History' })
     vim.keymap.set('n', '<leader>sf', function()
       require('modules.telescope_pickers').prettyFilesPicker({
         picker = 'find_files',

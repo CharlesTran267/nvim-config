@@ -31,30 +31,34 @@ return {
         -- Conform can also run multiple formatters sequentially
         -- You can use a function here to determine the formatters dynamically
         python = function(bufnr)
-          if require("conform").get_formatter_info("ruff_format", bufnr).available then
-            return { "ruff_format" }
+          if require('conform').get_formatter_info('ruff_format', bufnr).available then
+            return { 'ruff_format' }
           else
-            return { "black" }
+            return { 'black' }
           end
         end,
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
-        javascript = { { 'prettierd', 'prettier' } },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
         cpp = { 'clang-format' },
+        c = { 'clang-format' },
+        json = { 'prettierd', 'prettier', stop_after_first = true },
         -- Use the "*" filetype to run formatters on all filetypes.
-        ["*"] = { "codespell" },
+        ['*'] = { 'codespell' },
         -- Use the "_" filetype to run formatters on filetypes that don't
         -- have other formatters configured.
-        ["_"] = { "trim_whitespace" },
+        ['_'] = { 'trim_whitespace' },
       },
       -- Per-formatter config
       formatters = {
         -- Make clang-format use Google style
         ['clang-format'] = {
-          -- this ends up running: clang-format --style=Google
-          prepend_args = { '--style=Google' },
+          prepend_args = { '--style={BasedOnStyle: Google, SortIncludes: false}' },
         },
+        ['stylua'] = {
+          prepend_args = { "--search-parent-directories", "--stdin-filepath", "$FILENAME", "--indent-type", "Spaces", "--indent-width", "4", "-" },
+        }
       },
     },
   },
