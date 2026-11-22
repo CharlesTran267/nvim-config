@@ -150,6 +150,8 @@ return { -- LSP Configuration & Plugins
           'clangd',
           '--offset-encoding=utf-16',
         },
+        -- Only used when a file has no compile_commands.json entry; project -std still wins.
+        init_options = { fallbackFlags = { '-std=c++23' } },
       },
       -- gopls = {},
       -- ty = {},

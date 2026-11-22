@@ -61,22 +61,7 @@ return {
             vim.keymap.set(mode, l, r, opts)
           end
 
-          -- Navigation
-          map('n', ']c', function()
-            if vim.wo.diff then
-              vim.cmd.normal { ']c', bang = true }
-            else
-              gitsigns.nav_hunk 'next'
-            end
-          end, { desc = 'Next hunk' })
-
-          map('n', '[c', function()
-            if vim.wo.diff then
-              vim.cmd.normal { '[c', bang = true }
-            else
-              gitsigns.nav_hunk 'prev'
-            end
-          end, { desc = 'Previous hunk' })
+          -- ]c / [c are global maps below, not per buffer
 
           -- Actions
           map('n', '<leader>ghs', gitsigns.stage_hunk, { desc = 'Stage hunk' })
@@ -105,6 +90,20 @@ return {
           map({ 'o', 'x' }, 'gih', ':<C-U>Gitsigns select_hunk<CR>')
         end,
       }
+
+      -- Global on purpose: codediff puts its own buffer-local ]c on review buffers
+      -- and deletes it when the tab closes, taking a buffer-local gitsigns map
+      -- with it (]c dead until the file was reopened). In a review codediff's
+      -- buffer-local map wins; everywhere else this one does.
+      for key, dir in pairs { [']c'] = 'next', ['[c'] = 'prev' } do
+        vim.keymap.set('n', key, function()
+          if vim.wo.diff then
+            vim.cmd.normal { key, bang = true }
+          else
+            require('gitsigns').nav_hunk(dir)
+          end
+        end, { desc = (dir == 'next' and 'Next' or 'Previous') .. ' hunk' })
+      end
     end,
   },
 }

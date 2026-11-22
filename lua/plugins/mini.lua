@@ -16,6 +16,12 @@ return { -- Collection of various small independent plugins/modules
     -- - sr)'  - [S]urround [R]eplace [)] [']
     require('mini.surround').setup()
 
+    -- Auto-pairs: <BS> on `(|)` deletes both, `)` skips over existing, <CR> in `{|}` splits
+    -- ponytail: quotes off, matching the old commented-out mappings
+    require('mini.pairs').setup {
+      mappings = { ['"'] = false, ["'"] = false, ['`'] = false },
+    }
+
     -- Simple and easy statusline.
     --  You could remove this setup call if you don't like it,
     --  and try some other statusline plugin

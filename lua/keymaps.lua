@@ -13,13 +13,10 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagn
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
--- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
--- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
--- is not what someone will guess without a bit more experience.
---
--- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
--- or just use <C-\><C-n> to exit terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+-- No Esc-based terminal-mode exit: nvim decodes two Esc presses under 'ttimeoutlen'
+-- (50ms) apart as <M-Esc>, so a fast Esc-Esc meant for Claude (rewind) or Codex
+-- (edit previous) dropped into terminal-normal. Use <C-\><C-n> or <A-v>.
+vim.keymap.set('t', '<A-v>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -34,15 +31,6 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 
 -- vim.keymap.set('n', '<CR>', 'm`o<Esc>``')
 -- vim.keymap.set('n', '<S-CR>', 'm`O<Esc>``')
-
--- Add auto-pairs
--- vim.keymap.set('i', '"', '""<left>', { expr = false })
--- vim.keymap.set('i', "'", "''<left>", { expr = false })
-vim.keymap.set('i', '(', '()<left>', { expr = false })
-vim.keymap.set('i', '[', '[]<left>', { expr = false })
-vim.keymap.set('i', '{', '{}<left>', { expr = false })
-vim.keymap.set('i', '{<CR>', '{<CR>}<Esc>O', { expr = false })
--- vim.keymap.set('i', '`', '``<left>', { expr = false })
 
 -- paste in visual mode without overwriting the default register
 vim.keymap.set('v', 'p', '"_dP', { expr = false })

@@ -10,204 +10,217 @@ return {
     -- restores the clamp. Per-terminal env REPLACES setup env, so repeat it.
     local claude_env = { TMUX = '', TMUX_PANE = '', TERM_PROGRAM = '', FORCE_COLOR = '2' }
 
-    -- Predefined terminal configs (lazy - only created when first accessed)
-    local terminal_configs = {
-      general = { cmd = vim.o.shell, direction = 'float' },
-      lazygit = { cmd = 'lazygit', direction = 'float' },
-      aider = { cmd = 'aider', direction = 'float' },
-      codex = { cmd = 'codex', direction = 'float' },
-      ['claude-random'] = { cmd = 'claude', direction = 'float', env = claude_env },
-      claude = { cmd = 'claude', direction = 'float', env = claude_env },
-    }
-
-    local terminals = {}
-    local custom_shells = {} -- Track user-created shells
-    local last_terminal = 'general'
-    local terminal_history = { 'general' } -- Track visited terminals in order
-    local history_index = 1
-
-    -- Build the winbar string for a terminal (called dynamically each redraw).
-    -- Toggleterm skips its built-in winbar for floats, so we set it manually.
-    _G.__toggleterm_custom_winbar = function(current_id)
-      local parts = {}
-      for _, name in ipairs(terminal_history) do
-        local t = terminals[name]
-        if t then
-          if t.id == current_id then
-            table.insert(parts, '%#ToggletermWinbarSel# ▶ ' .. name .. ' %*')
-          else
-            table.insert(parts, '%#ToggletermWinbar#   ' .. name .. ' %*')
-          end
-        end
-      end
-      if #parts == 0 then return ' ' end
-      return '%#ToggletermWinbar# ' .. table.concat(parts, '') .. '%#ToggletermWinbar#%='
+    -- No display_name: toggleterm would draw it as the float's border title, and the
+    -- winbar already names every terminal.
+    local function shell()
+      return { cmd = vim.o.shell }
     end
 
-    -- Give the winbar a distinct background so it doesn't blend into terminal content
-    local ok, palette = pcall(require, 'catppuccin.palettes')
-    local c = ok and palette.get_palette() or {}
-    vim.api.nvim_set_hl(0, 'ToggletermWinbar', { bg = c.mantle or '#1e2030', fg = c.subtext0 or '#a5adcb', bold = true })
-    vim.api.nvim_set_hl(0, 'ToggletermWinbarSel', { bg = c.surface0 or '#363a4f', fg = c.red or '#ed8796', bold = true })
-
-    toggleterm.setup {
-      direction = 'float',
-      start_in_insert = true,
-      -- nvim's :terminal is the real parent, not tmux. With TMUX set, TUIs wrap
-      -- OSC 52 clipboard writes in tmux passthrough, which nvim paints as text.
-      env = { TMUX = '', TMUX_PANE = '', TERM_PROGRAM = '' },
-      winbar = { enabled = false }, -- disable built-in winbar; we set our own in on_open
-      highlights = {
-        FloatBorder = {
-          guifg = '#8aadf4', -- Catppuccin Macchiato blue
-        },
-      },
-      on_open = function(term)
-        if term.window and vim.api.nvim_win_is_valid(term.window) then
-          vim.wo[term.window].winbar = string.format('%%{%%v:lua.__toggleterm_custom_winbar(%d)%%}', term.id)
-        end
-      end,
+    -- Picker order. Any other name is a user shell created on demand.
+    local predefined = { 'general', 'random', 'lazygit', 'codex', 'claude', 'claude2', 'claude3' }
+    local configs = {
+      general = shell(),
+      random = { cmd = vim.o.shell, dir = vim.fn.expand '~/random' },
+      lazygit = { cmd = 'lazygit' },
+      -- Codex draws inline (alt screen only for its Ctrl-T/diff overlays), so its
+      -- transcript is nvim scrollback: wheel-up reads it in terminal-normal mode.
+      codex = { cmd = 'codex' },
+      claude = { cmd = 'claude', env = claude_env },
+      claude2 = { cmd = 'claude', env = claude_env },
+      claude3 = { cmd = 'claude', env = claude_env },
     }
 
-    -- Mouse drag only reaches the child while nvim is in Terminal mode, so landing in
-    -- terminal-normal breaks claude's drag-select as well as feeling wrong. An autocmd has
-    -- no race window; vim.schedule(startinsert) in on_open lost to fast toggles/keypresses.
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
-      pattern = 'term://*',
-      callback = function() vim.cmd 'startinsert' end,
-    })
+    local terminals = {} -- name -> Terminal, created on first use
+    local history = { 'general' } -- visit order, most recent last
+    local history_index = 1
+    local function current()
+      return history[history_index] or 'general'
+    end
 
     local function get_terminal(name)
       if not terminals[name] then
-        local config = terminal_configs[name] or { cmd = vim.o.shell, display_name = name, direction = 'float' }
-        terminals[name] = Terminal:new(config)
+        -- Terminal:new mutates and returns the table it is given; hand it a copy so a
+        -- terminal restarted after <A-q> does not inherit stale bufnr/window fields.
+        terminals[name] = Terminal:new(vim.deepcopy(configs[name] or shell()))
       end
       return terminals[name]
     end
 
-    local function toggle_terminal(name)
-      local term = get_terminal(name)
-      -- Update history
-      if name ~= last_terminal then
-        -- Remove if already in history, then add to end
-        for i, n in ipairs(terminal_history) do
-          if n == name then
-            table.remove(terminal_history, i)
-            break
-          end
+    -- Give the winbar a distinct background so it doesn't blend into terminal content.
+    -- Colors come from gruvbox-material (accent = i3 focused-border yellow). With any other
+    -- colorscheme the palette call fails and the Catppuccin Macchiato fallbacks apply.
+    local ok, c = pcall(function()
+      local conf = vim.fn['gruvbox_material#get_configuration']()
+      local p = vim.fn['gruvbox_material#get_palette'](conf.background, conf.foreground, conf.colors_override)
+      return { bg = p.bg1[1], fg = p.grey2[1], sel_bg = p.yellow[1], sel_fg = p.bg0[1], accent = p.yellow[1] }
+    end)
+    c = ok and c or {}
+    vim.api.nvim_set_hl(0, 'ToggletermWinbar', { bg = c.bg or '#1e2030', fg = c.fg or '#a5adcb', bold = true })
+    vim.api.nvim_set_hl(0, 'ToggletermWinbarSel', { bg = c.sel_bg or '#363a4f', fg = c.sel_fg or '#ed8796', bold = true })
+
+    toggleterm.setup {
+      direction = 'float',
+      -- Always reopen terminals ready for input instead of restoring an
+      -- accidentally persisted terminal-normal state.
+      persist_mode = false,
+      -- Default true runs `normal! G` on every output chunk while in terminal-normal,
+      -- yanking a scrolled-up view back down (unreadable while Codex streams).
+      -- Terminal mode still follows output on its own.
+      auto_scroll = false,
+      -- nvim's :terminal is the real parent, not tmux. With TMUX set, TUIs wrap
+      -- OSC 52 clipboard writes in tmux passthrough, which nvim paints as text.
+      env = { TMUX = '', TMUX_PANE = '', TERM_PROGRAM = '' },
+      highlights = { FloatBorder = { guifg = c.accent or '#8aadf4' } }, -- fallback: Catppuccin Macchiato blue
+      -- Toggleterm skips its built-in winbar for floats; list the visited terminals
+      -- ourselves. History only changes through actions that reopen a window, so a
+      -- plain string set on open stays current.
+      on_open = function(term)
+        local parts = {}
+        for _, name in ipairs(history) do
+          local hl = terminals[name] == term and '%#ToggletermWinbarSel# ▶ ' or '%#ToggletermWinbar#   '
+          parts[#parts + 1] = hl .. name .. ' '
         end
-        table.insert(terminal_history, name)
-        history_index = #terminal_history
-      end
-      last_terminal = name
-      term:toggle()
-    end
+        vim.wo[term.window].winbar = '%#ToggletermWinbar# ' .. table.concat(parts) .. '%#ToggletermWinbar#%='
+      end,
+    }
 
-    local function create_new_shell(name)
-      terminal_configs[name] = { cmd = vim.o.shell, display_name = name, direction = 'float' }
-      table.insert(custom_shells, name)
-      toggle_terminal(name)
-    end
-
-    -- Toggle last-used terminal (defaults to general)
-    vim.keymap.set({ 'n', 't' }, '<A-i>', function()
-      toggle_terminal(last_terminal)
-    end, { desc = 'Toggle last terminal' })
-
-    -- Terminal picker
-    vim.keymap.set({ 'n', 't' }, '<A-s>', function()
-      local options = { 'general', 'lazygit', 'aider', 'codex', 'claude-random', 'claude' }
-      -- Add custom shells to the list
-      for _, name in ipairs(custom_shells) do
-        table.insert(options, name)
-      end
-      table.insert(options, '+ new shell')
-
-      vim.ui.select(options, { prompt = 'Select terminal:' }, function(choice)
-        if not choice then
-          return
-        end
-        if choice == '+ new shell' then
-          vim.ui.input({ prompt = 'Shell name: ' }, function(name)
-            if name and name ~= '' then
-              create_new_shell(name)
-            end
-          end)
-        else
-          toggle_terminal(choice)
+    -- In terminal mode the view is already at the bottom. A child with mouse reporting
+    -- (claude, lazygit, anything run inside a shell) gets the wheel-down; for one
+    -- without, nvim drops to terminal-normal instead, so undo that.
+    vim.keymap.set('t', '<ScrollWheelDown>', function()
+      vim.schedule(function()
+        if vim.api.nvim_get_mode().mode == 'nt' then
+          vim.cmd 'startinsert'
         end
       end)
-    end, { desc = 'Select terminal' })
+      return '<ScrollWheelDown>'
+    end, { expr = true, desc = 'Wheel-down without leaving terminal mode' })
 
-    -- Quit current terminal (custom shells removed from list, predefined start fresh)
-    vim.keymap.set('t', '<A-q>', function()
-      local current_term = terminals[last_terminal]
-      if current_term then
-        current_term:shutdown()
-        terminals[last_terminal] = nil -- Remove from cache so it starts fresh next time
+    -- Wheel-down that reaches the bottom re-enters terminal mode, so read-then-return
+    -- needs no `i`. Pointer over another window: hand the event back for the default scroll.
+    vim.api.nvim_create_autocmd('TermOpen', {
+      callback = function(ev)
+        vim.keymap.set('n', '<ScrollWheelDown>', function()
+          if vim.fn.getmousepos().winid ~= vim.api.nvim_get_current_win() then
+            return vim.api.nvim_feedkeys(vim.keycode '<ScrollWheelDown>', 'n', false)
+          end
+          local lines = vim.o.mousescroll:match 'ver:(%d+)' or 3
+          vim.cmd(('normal! %d%s'):format(lines, vim.keycode '<C-e>'))
+          if vim.fn.line 'w$' >= vim.fn.line '$' then
+            vim.cmd 'startinsert'
+          end
+        end, { buffer = ev.buf, desc = 'Scroll down; re-enter terminal mode at bottom' })
+      end,
+    })
 
-        -- Remove from history
-        for i, n in ipairs(terminal_history) do
-          if n == last_terminal then
-            table.remove(terminal_history, i)
-            if history_index > #terminal_history then
-              history_index = math.max(1, #terminal_history)
-            end
+    -- toggleterm enters Terminal mode from a scheduled BufEnter callback, and nvim runs
+    -- pending keys before scheduled callbacks: keys typed right after a toggle ran as
+    -- Normal commands. :startinsert here takes effect before the next key is read.
+    local function enter_terminal_mode()
+      if vim.bo.buftype == 'terminal' then
+        vim.cmd 'startinsert'
+      end
+    end
+
+    local function toggle_terminal(name)
+      if history[history_index] ~= name then -- move to the end of history (most recent)
+        for i, n in ipairs(history) do
+          if n == name then
+            table.remove(history, i)
             break
           end
         end
-
-        -- If it's a custom shell, remove it from the list entirely
-        for i, name in ipairs(custom_shells) do
-          if name == last_terminal then
-            table.remove(custom_shells, i)
-            terminal_configs[last_terminal] = nil
-            break
-          end
-        end
-
-        last_terminal = terminal_history[history_index] or 'general'
+        table.insert(history, name)
+        history_index = #history
       end
-    end, { desc = 'Quit terminal' })
+      get_terminal(name):toggle()
+      enter_terminal_mode()
+    end
 
-    -- Toggle general terminal
-    vim.keymap.set({ 'n', 't' }, '<A-g>', function()
-      toggle_terminal('general')
-    end, { desc = 'Toggle general terminal' })
-
-    -- Navigate to previous terminal in history (wraps around)
-    vim.keymap.set({ 'n', 't' }, '<A-p>', function()
-      if #terminal_history < 2 then return end
-      history_index = (history_index - 2) % #terminal_history + 1
-      local name = terminal_history[history_index]
-      local term = get_terminal(name)
-      if terminals[last_terminal] then
-        terminals[last_terminal]:close()
-      end
-      last_terminal = name
-      term:open()
-    end, { desc = 'Previous terminal (history)' })
-
-    -- Navigate to next terminal in history (wraps around)
-    vim.keymap.set({ 'n', 't' }, '<A-n>', function()
-      if #terminal_history < 2 then return end
-      history_index = history_index % #terminal_history + 1
-      local name = terminal_history[history_index]
-      local term = get_terminal(name)
-      if terminals[last_terminal] then
-        terminals[last_terminal]:close()
-      end
-      last_terminal = name
-      term:open()
-    end, { desc = 'Next terminal (history)' })
-
-    -- Create new shell (prompts for name)
-    vim.keymap.set({ 'n', 't' }, '<A-S-n>', function()
+    local function new_shell()
       vim.ui.input({ prompt = 'Shell name: ' }, function(name)
         if name and name ~= '' then
-          create_new_shell(name)
+          toggle_terminal(name)
+        else
+          vim.schedule(enter_terminal_mode) -- cancelled: back to the terminal we came from
         end
       end)
-    end, { desc = 'New shell' })
+    end
+
+    -- Step through history with wrap-around, closing the current float first.
+    local function cycle(step)
+      if #history < 2 then
+        return
+      end
+      local cur = terminals[history[history_index]]
+      history_index = (history_index - 1 + step) % #history + 1
+      if cur then
+        cur:close()
+      end
+      get_terminal(history[history_index]):open()
+      enter_terminal_mode()
+    end
+
+    -- Terminal-mode chords leave Terminal mode through typeahead and replay as the n map,
+    -- so keys typed right after them stay queued behind the switch. (Running the action
+    -- inside the terminal loop let toggleterm's WinLeave `stopinsert!` cancel the new
+    -- terminal's startinsert; vim.schedule let typed keys overtake it.)
+    -- The <C-\><C-n> also strands you in terminal-normal when the action is a no-op
+    -- (one-entry history, nothing to quit), so re-enter afterwards if still on a terminal.
+    local function map(lhs, fn, desc)
+      vim.keymap.set('n', lhs, function()
+        fn()
+        enter_terminal_mode()
+      end, { desc = desc })
+      vim.keymap.set('t', lhs, '<C-\\><C-n>' .. lhs, { remap = true, desc = desc })
+    end
+
+    map('<A-i>', function()
+      toggle_terminal(current())
+    end, 'Toggle last terminal')
+    map('<A-g>', function()
+      toggle_terminal 'general'
+    end, 'Toggle general terminal')
+    map('<A-p>', function()
+      cycle(-1)
+    end, 'Previous terminal (history)')
+    map('<A-n>', function()
+      cycle(1)
+    end, 'Next terminal (history)')
+    map('<A-S-n>', new_shell, 'New shell')
+
+    map('<A-s>', function()
+      local options = vim.deepcopy(predefined)
+      local custom = vim.tbl_filter(function(n)
+        return not vim.list_contains(predefined, n)
+      end, vim.tbl_keys(terminals))
+      table.sort(custom)
+      vim.list_extend(options, custom)
+      table.insert(options, '+ new shell')
+      vim.ui.select(options, { prompt = 'Select terminal:' }, function(choice)
+        if choice == '+ new shell' then
+          new_shell()
+        elseif choice then
+          toggle_terminal(choice)
+        else
+          vim.schedule(enter_terminal_mode) -- telescope restores focus after this callback
+        end
+      end)
+    end, 'Select terminal')
+
+    -- Quit current terminal: user shells leave the picker, predefined ones start fresh next time.
+    map('<A-q>', function()
+      if vim.bo.buftype ~= 'terminal' then -- unmapped <M-q> in a file would run as <Esc>q
+        return
+      end
+      local name = current()
+      if not terminals[name] then
+        return
+      end
+      terminals[name]:shutdown()
+      terminals[name] = nil
+      table.remove(history, history_index)
+      history_index = math.max(1, math.min(history_index, #history))
+    end, 'Quit terminal')
   end,
 }

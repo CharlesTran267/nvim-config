@@ -89,8 +89,8 @@ return {
     -- Install golang specific config
     require('dap-go').setup()
 
-    -- Python: use debugpy from the eureka venv so it matches the app interpreter
-    local venv_python = '/home/ci/python-venv/bin/python3'
+    -- Python: use debugpy from the active EC venv (`ecw` / ~/.env) so it matches the app interpreter
+    local venv_python = (os.getenv('VIRTUAL_ENV') or '/usr') .. '/bin/python3'
     require('dap-python').setup(venv_python)
     table.insert(dap.configurations.python, {
       type = 'python',
