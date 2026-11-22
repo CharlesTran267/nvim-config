@@ -1,6 +1,21 @@
+local theme = 'gruvbox-material' -- set to 'catppuccin' to switch back
+
 return {
   {
+    'sainnhe/gruvbox-material',
+    cond = theme == 'gruvbox-material',
+    lazy = false,
+    priority = 1000,
+    config = function()
+      vim.g.gruvbox_material_background = 'hard' -- #1d2021, same as i3
+      vim.g.gruvbox_material_transparent_background = 2 -- keep kitty wallpaper
+      vim.g.gruvbox_material_float_style = 'dim'
+      vim.cmd.colorscheme 'gruvbox-material'
+    end,
+  },
+  {
     'catppuccin/nvim',
+    cond = theme == 'catppuccin',
     lazy = false,
     name = 'catppuccin',
     priority = 1000,

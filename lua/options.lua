@@ -12,6 +12,11 @@ vim.opt.relativenumber = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
 
+-- 24-bit color. Auto-detect needs $COLORTERM, which the container shell (docker exec, then
+-- tmux) doesn't carry, so nvim fell back to the 256-color palette: washed-out theme,
+-- toggleterm border ignored, no starship colors inside :terminal.
+vim.opt.termguicolors = true
+
 -- nvim 0.11+ blinks the terminal-mode cursor by default; keep it steady
 vim.opt.guicursor:append 't:block-blinkon0-TermCursor'
 
